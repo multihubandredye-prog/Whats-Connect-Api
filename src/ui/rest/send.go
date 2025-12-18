@@ -24,7 +24,99 @@ func InitRestSend(app fiber.Router, service domainSend.ISendUsecase) Send {
 	app.Post("/send/poll", rest.SendPoll)
 	app.Post("/send/presence", rest.SendPresence)
 	app.Post("/send/chat-presence", rest.SendChatPresence)
+
+	// JSON Endpoints
+	app.Post("/send/json/image", rest.SendImageJson)
+	app.Post("/send/json/file", rest.SendFileJson)
+	app.Post("/send/json/video", rest.SendVideoJson)
+	app.Post("/send/json/audio", rest.SendAudioJson)
 	return rest
+}
+
+func (controller *Send) SendImageJson(c *fiber.Ctx) error {
+	var request domainSend.ImageRequest
+	request.Compress = true
+
+	err := c.BodyParser(&request)
+	utils.PanicIfNeeded(err)
+
+	// In JSON endpoint, we expect ImageURL to be present, not Image file
+	// The underlying usecase SendImage already handles either file or URL
+	
+	utils.SanitizePhone(&request.Phone)
+
+	response, err := controller.Service.SendImage(c.UserContext(), request)
+	utils.PanicIfNeeded(err)
+
+	return c.JSON(utils.ResponseData{
+		Status:  200,
+		Code:    "SUCCESS",
+		Message: response.Status,
+		Results: response,
+	})
+}
+
+func (controller *Send) SendFileJson(c *fiber.Ctx) error {
+	var request domainSend.FileRequest
+	err := c.BodyParser(&request)
+	utils.PanicIfNeeded(err)
+
+	// In JSON endpoint, we expect FileURL to be present, not File file
+	// The underlying usecase SendFile already handles either file or URL
+
+	utils.SanitizePhone(&request.Phone)
+
+	response, err := controller.Service.SendFile(c.UserContext(), request)
+	utils.PanicIfNeeded(err)
+
+	return c.JSON(utils.ResponseData{
+		Status:  200,
+		Code:    "SUCCESS",
+		Message: response.Status,
+		Results: response,
+	})
+}
+
+func (controller *Send) SendVideoJson(c *fiber.Ctx) error {
+	var request domainSend.VideoRequest
+	err := c.BodyParser(&request)
+	utils.PanicIfNeeded(err)
+
+	// In JSON endpoint, we expect VideoURL to be present, not Video file
+	// The underlying usecase SendVideo already handles either file or URL
+
+	utils.SanitizePhone(&request.Phone)
+
+	response, err := controller.Service.SendVideo(c.UserContext(), request)
+	utils.PanicIfNeeded(err)
+
+	return c.JSON(utils.ResponseData{
+		Status:  200,
+		Code:    "SUCCESS",
+		Message: response.Status,
+		Results: response,
+	})
+}
+
+func (controller *Send) SendAudioJson(c *fiber.Ctx) error {
+	var request domainSend.AudioRequest
+	err := c.BodyParser(&request)
+	utils.PanicIfNeeded(err)
+
+	// In JSON endpoint, we expect AudioURL to be present, not Audio file
+	// The underlying usecase SendAudio already handles either file or URL
+
+	utils.SanitizePhone(&request.Phone)
+
+	response, err := controller.Service.SendAudio(c.UserContext(), request)
+	utils.PanicIfNeeded(err)
+
+	return c.JSON(utils.ResponseData{
+		Status:  200,
+		Code:    "SUCCESS",
+		Message: response.Status,
+		Results: response,
+	})
 }
 
 func (controller *Send) SendText(c *fiber.Ctx) error {

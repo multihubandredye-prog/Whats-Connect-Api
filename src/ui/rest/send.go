@@ -40,8 +40,8 @@ func (controller *Send) SendImageJson(c *fiber.Ctx) error {
 	err := c.BodyParser(&request)
 	utils.PanicIfNeeded(err)
 
-	// In JSON endpoint, we expect ImageURL to be present, not Image file
-	// The underlying usecase SendImage already handles either file or URL
+	// In JSON endpoint, we can expect ImageURL or ImagePath (base64)
+	// The underlying usecase SendImage already handles either file, URL, or base64
 	
 	utils.SanitizePhone(&request.Phone)
 
@@ -61,8 +61,8 @@ func (controller *Send) SendFileJson(c *fiber.Ctx) error {
 	err := c.BodyParser(&request)
 	utils.PanicIfNeeded(err)
 
-	// In JSON endpoint, we expect FileURL to be present, not File file
-	// The underlying usecase SendFile already handles either file or URL
+	// In JSON endpoint, we can expect FileURL or FilePath (base64)
+	// The underlying usecase SendFile already handles either file, URL, or base64
 
 	utils.SanitizePhone(&request.Phone)
 
@@ -82,8 +82,8 @@ func (controller *Send) SendVideoJson(c *fiber.Ctx) error {
 	err := c.BodyParser(&request)
 	utils.PanicIfNeeded(err)
 
-	// In JSON endpoint, we expect VideoURL to be present, not Video file
-	// The underlying usecase SendVideo already handles either file or URL
+	// In JSON endpoint, we can expect VideoURL or VideoPath (base64)
+	// The underlying usecase SendVideo already handles either file, URL, or base64
 
 	utils.SanitizePhone(&request.Phone)
 
@@ -103,8 +103,8 @@ func (controller *Send) SendAudioJson(c *fiber.Ctx) error {
 	err := c.BodyParser(&request)
 	utils.PanicIfNeeded(err)
 
-	// In JSON endpoint, we expect AudioURL to be present, not Audio file
-	// The underlying usecase SendAudio already handles either file or URL
+	// In JSON endpoint, we can expect AudioURL or AudioPath (base64)
+	// The underlying usecase SendAudio already handles either file, URL, or base64
 
 	utils.SanitizePhone(&request.Phone)
 

@@ -3,6 +3,7 @@ package usecase
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"mime"
@@ -225,6 +226,18 @@ func (service serviceSend) SendImage(ctx context.Context, request domainSend.Ima
 		if err != nil {
 			return response, pkgError.InternalServerError(fmt.Sprintf("failed to save downloaded image %v", err))
 		}
+	} else if request.ImagePath != nil && *request.ImagePath != "" {
+		// Save base64 image to file
+		var (
+			filePath string
+			fileName string
+		)
+		filePath, fileName, err = utils.SaveBase64ToFile(*request.ImagePath, "image")
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to save base64 image %v", err))
+		}
+		oriImagePath = filePath
+		imageName = fileName
 	} else if request.Image != nil {
 		// Save image to server
 		oriImagePath = fmt.Sprintf("%s/%s", config.PathSendItems, request.Image.Filename)
@@ -341,8 +354,39 @@ func (service serviceSend) SendFile(ctx context.Context, request domainSend.File
 		return response, err
 	}
 
-	fileBytes := helpers.MultipartFormFileHeaderToBytes(request.File)
-	fileMimeType := resolveDocumentMIME(request.File.Filename, fileBytes)
+	var fileBytes []byte
+	var fileName string
+
+	if request.FileURL != nil && *request.FileURL != "" {
+		fileBytes, fileName, err = utils.DownloadFileFromURL(*request.FileURL)
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to download file from URL: %v", err))
+		}
+	} else if request.FilePath != nil && *request.FilePath != "" {
+		var decodedData []byte
+		b64data := *request.FilePath
+		if s := strings.Split(b64data, "base64,"); len(s) > 1 {
+			b64data = s[1]
+		}
+		decodedData, err = base64.StdEncoding.DecodeString(b64data)
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to decode base64 file: %v", err))
+		}
+		fileBytes = decodedData
+
+		mimeType := http.DetectContentType(fileBytes)
+		extensions, _ := mime.ExtensionsByType(mimeType)
+		extension := ".bin" // default extension
+		if len(extensions) > 0 {
+			extension = extensions[0]
+		}
+		fileName = fmt.Sprintf("file-%d%s", time.Now().UnixNano(), extension)
+	} else if request.File != nil {
+		fileBytes = helpers.MultipartFormFileHeaderToBytes(request.File)
+		fileName = request.File.Filename
+	}
+
+	fileMimeType := resolveDocumentMIME(fileName, fileBytes)
 
 	// Send to WA server
 	uploadedFile, err := service.uploadMedia(ctx, whatsmeow.MediaDocument, fileBytes, dataWaRecipient)
@@ -354,11 +398,11 @@ func (service serviceSend) SendFile(ctx context.Context, request domainSend.File
 	msg := &waE2E.Message{DocumentMessage: &waE2E.DocumentMessage{
 		URL:           proto.String(uploadedFile.URL),
 		Mimetype:      proto.String(fileMimeType),
-		Title:         proto.String(request.File.Filename),
+		Title:         proto.String(fileName),
 		FileSHA256:    uploadedFile.FileSHA256,
 		FileLength:    proto.Uint64(uploadedFile.FileLength),
 		MediaKey:      uploadedFile.MediaKey,
-		FileName:      proto.String(request.File.Filename),
+		FileName:      proto.String(fileName),
 		FileEncSHA256: uploadedFile.FileEncSHA256,
 		DirectPath:    proto.String(uploadedFile.DirectPath),
 		Caption:       proto.String(request.Caption),
@@ -447,6 +491,14 @@ func (service serviceSend) SendVideo(ctx context.Context, request domainSend.Vid
 		if errWrite := os.WriteFile(oriVideoPath, videoBytes, 0644); errWrite != nil {
 			return response, pkgError.InternalServerError(fmt.Sprintf("failed to store downloaded video in server %v", errWrite))
 		}
+	} else if request.VideoPath != nil && *request.VideoPath != "" {
+		// Save base64 video to file
+		var filePath string
+		filePath, _, err = utils.SaveBase64ToFile(*request.VideoPath, "video")
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to save base64 video %v", err))
+		}
+		oriVideoPath = filePath
 	} else if request.Video != nil {
 		// Save uploaded video to server
 		oriVideoPath = fmt.Sprintf("%s/%s", config.PathSendItems, generateUUID+request.Video.Filename)
@@ -456,7 +508,7 @@ func (service serviceSend) SendVideo(ctx context.Context, request domainSend.Vid
 		}
 	} else {
 		// This should not happen due to validation, but guard anyway
-		return response, pkgError.ValidationError("either Video or VideoURL must be provided")
+		return response, pkgError.ValidationError("either Video, VideoURL or VideoPath must be provided")
 	}
 
 	// Check if ffmpeg is installed
@@ -762,17 +814,25 @@ func (service serviceSend) SendAudio(ctx context.Context, request domainSend.Aud
 		audioMimeType string
 	)
 
-	// Handle audio from URL or file
+	// Handle audio from URL, base64 path, or file
 	if request.AudioURL != nil && *request.AudioURL != "" {
 		audioBytes, _, err = utils.DownloadAudioFromURL(*request.AudioURL)
 		if err != nil {
 			return response, pkgError.InternalServerError(fmt.Sprintf("failed to download audio from URL %v", err))
 		}
-		audioMimeType = http.DetectContentType(audioBytes)
+	} else if request.AudioPath != nil && *request.AudioPath != "" {
+		b64data := *request.AudioPath
+		if s := strings.Split(b64data, "base64,"); len(s) > 1 {
+			b64data = s[1]
+		}
+		audioBytes, err = base64.StdEncoding.DecodeString(b64data)
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to decode base64 audio: %v", err))
+		}
 	} else if request.Audio != nil {
 		audioBytes = helpers.MultipartFormFileHeaderToBytes(request.Audio)
-		audioMimeType = http.DetectContentType(audioBytes)
 	}
+	audioMimeType = http.DetectContentType(audioBytes)
 
 	// upload to WhatsApp servers
 	audioUploaded, err := service.uploadMedia(ctx, whatsmeow.MediaAudio, audioBytes, dataWaRecipient)

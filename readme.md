@@ -2,7 +2,7 @@
 <!-- markdownlint-disable-next-line MD033 -->
 <div align="center">
   <!-- markdownlint-disable-next-line MD033 -->
-  <img src="src/views/assets/gowa.svg" alt="GoWA Logo" width="200" height="200">
+  <img src="src/views/assets/logo.svg" alt="GoWA Logo" width="200" height="200">
 
 ## Golang WhatsApp - Built with Go for efficient memory use
 

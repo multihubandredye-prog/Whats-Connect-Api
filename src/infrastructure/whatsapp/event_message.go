@@ -2,22 +2,39 @@ package whatsapp
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"mime"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
-
-	"path/filepath"
-	"mime"
-
-	"go.mau.fi/whatsmeow/types"
 
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
 	pkgError "github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/error"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
 	"github.com/sirupsen/logrus"
+	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 )
+
+// pollInfo stores relevant information about a poll creation message.
+type pollInfo struct {
+	Title         string   // Add title for the poll
+	Options       []string
+	MessageSecret []byte // Store the message secret from the original poll creation
+}
+
+// pollStorage maps Message ID to pollInfo. This is a temporary in-memory store.
+var pollStorage = make(map[string]pollInfo)
+
+// hashSHA256 computes the SHA-256 hash of a string and returns its hexadecimal representation.
+func hashSHA256(text string) string {
+	h := sha256.New()
+	h.Write([]byte(text))
+	return hex.EncodeToString(h.Sum(nil))
+}
 
 // forwardMessageToWebhook is a helper function to forward message event to webhook url
 func forwardMessageToWebhook(ctx context.Context, evt *events.Message) error {
@@ -339,10 +356,55 @@ func createMessagePayload(ctx context.Context, evt *events.Message) (map[string]
 		}
 	} else if pollUpdateMessage := evt.Message.GetPollUpdateMessage(); pollUpdateMessage != nil {
 		type_message = "poll_response_message"
-		body["poll_response"] = map[string]any{
-			"poll_creation_message_key": pollUpdateMessage.GetPollCreationMessageKey(),
-			"vote":                      pollUpdateMessage.GetVote(), // This is a PollEncValue, might need further processing
+		decryptedVote, err := cli.DecryptPollVote(ctx, evt)
+		if err != nil {
+			logrus.Errorf("Failed to decrypt poll vote: %v", err)
 		}
+
+		var selectedOptions []string
+		if decryptedVote != nil {
+			for _, option := range decryptedVote.GetSelectedOptions() {
+				selectedOptions = append(selectedOptions, hex.EncodeToString(option))
+			}
+		}
+
+		pollResponsePayload := map[string]any{
+			"poll_creation_message_key": pollUpdateMessage.GetPollCreationMessageKey(),
+			"original_poll_message_secret": nil, // Will be set later if available
+			"poll_metadata": map[string]any{
+				"title":   nil, // Will be set later
+				"options": nil, // Will be set later
+			},
+			"vote_info": map[string]any{
+				"encrypted_payload": hex.EncodeToString(pollUpdateMessage.GetVote().GetEncPayload()),
+				"encrypted_iv":      hex.EncodeToString(pollUpdateMessage.GetVote().GetEncIV()),
+				"selected_option_hash": selectedOptions,
+				"selected_option_text": nil, // Will be set later
+			},
+		}
+
+		// Try to get the original poll message from storage
+		originalPollMessageID := pollUpdateMessage.GetPollCreationMessageKey().GetID()
+		if storedPoll, ok := pollStorage[originalPollMessageID]; ok {
+			// Find the plaintext option
+			for _, optionText := range storedPoll.Options {
+				if hashSHA256(optionText) == selectedOptions[0] { // Assuming single vote for simplicity as per user's JS
+					pollResponsePayload["vote_info"].(map[string]any)["selected_option_text"] = optionText
+					break
+				}
+			}
+			// Add original poll message secret if available
+			if storedPoll.MessageSecret != nil {
+				pollResponsePayload["original_poll_message_secret"] = hex.EncodeToString(storedPoll.MessageSecret)
+			}
+			// Add poll title and options to the response payload
+			pollResponsePayload["poll_metadata"].(map[string]any)["title"] = storedPoll.Title
+			pollResponsePayload["poll_metadata"].(map[string]any)["options"] = storedPoll.Options
+
+		} else {
+			logrus.Warnf("Original poll message with ID %s not found in storage. Cannot get plaintext option, original message secret, title or options.", originalPollMessageID)
+		}
+		body["poll_response"] = pollResponsePayload
 	} else if pollMessage := evt.Message.GetPollCreationMessageV3(); pollMessage != nil {
 		type_message = "poll_message"
 		options := make([]string, 0)
@@ -354,6 +416,22 @@ func createMessagePayload(ctx context.Context, evt *events.Message) (map[string]
 			"options": options,
 			"selectable_options_count": pollMessage.GetSelectableOptionsCount(),
 		}
+
+		// Store poll info for later use in poll responses
+		var msgSecret []byte
+		if evt.Message.GetMessageContextInfo() != nil && evt.Message.GetMessageContextInfo().GetMessageSecret() != nil {
+			msgSecret = evt.Message.GetMessageContextInfo().GetMessageSecret()
+		}
+		pollStorage[evt.Info.ID] = pollInfo{
+			Title:         pollMessage.GetName(), // Store poll title
+			Options:       options,
+			MessageSecret: msgSecret,
+		}
+	}
+
+	// Add message secret to every message type
+	if evt.Message.GetMessageContextInfo() != nil && evt.Message.GetMessageContextInfo().GetMessageSecret() != nil {
+		body["message_secret"] = hex.EncodeToString(evt.Message.GetMessageContextInfo().GetMessageSecret())
 	}
 
 	body["type_message"] = type_message
@@ -366,3 +444,4 @@ func createMessagePayload(ctx context.Context, evt *events.Message) (map[string]
 
 	return body, nil
 }
+

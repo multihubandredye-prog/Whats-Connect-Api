@@ -1,10 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Bootstrap CSS -->
     <link rel="stylesheet" type="text/css"
           href="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.8.8/semantic.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.4/css/dataTables.semanticui.min.css">
@@ -16,14 +14,13 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/axios@1.1.2/dist/axios.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-    <title>WhatsApp API {{ .AppVersion }}</title>
+    <title>Whats Connect Api {{ .AppVersion }}</title>
 </head>
 <body>
 <div id="splash-screen">
-    <!-- Clean squircle logo without background wrapper -->
-    <img src="{{ .AppBasePath }}/assets/gowa.svg" alt="GoWA Logo" class="splash-icon" id="main-logo">
+    <img src="{{ .AppBasePath }}/assets/logo.svg" alt="GoWA Logo" class="splash-icon" id="main-logo">
     
-    <h2 class="splash-title">WhatsApp API</h2>
+    <h2 class="splash-title">Whats Connect Api</h2>
     <div class="ui active large inline loader splash-spinner"></div>
 </div>
 
@@ -31,9 +28,9 @@
     <div class="main-header">
         <h1 class="ui header center aligned">
             <div class="title-container">
-                <img src="{{ .AppBasePath }}/assets/gowa.svg" alt="GoWA Logo">
+                <img src="{{ .AppBasePath }}/assets/logo.svg" alt="GoWA Logo">
                 
-                <span>WhatsApp API</span>
+                <span>Whats Connect Api</span>
                 
                 <div class="version-label">
                     {{ .AppVersion }}
@@ -45,10 +42,10 @@
     <div class="ui success message" v-if="connected_devices != null">
         <div class="header">
             <i class="check circle icon"></i>
-            Device Connected Successfully
+            Dispositivo conectado com sucesso
         </div>
         <p>
-            Device ID: <b>[[ connected_devices[0].device ]]</b>
+            Id do dispositivo : <b>[[ connected_devices[0].device ]]</b>
         </p>
     </div>
 
@@ -64,7 +61,7 @@
     </div>
 
     <div class="ui horizontal divider">
-        Send
+        Enviar
     </div>
 
     <div class="ui three column doubling grid cards">
@@ -87,7 +84,7 @@
     </div>
 
     <div class="ui horizontal divider">
-        Message
+        Mensagens
     </div>
 
     <div class="ui three column doubling grid cards">
@@ -99,7 +96,7 @@
     </div>
 
     <div class="ui horizontal divider">
-        Group
+        Grupos
     </div>
 
     <div class="ui three column doubling grid cards">
@@ -118,7 +115,7 @@
     </div>
 
     <div class="ui horizontal divider">
-        Newsletter
+        Boletim informativo
     </div>
 
     <div class="ui three column doubling grid cards">
@@ -126,7 +123,7 @@
     </div>
 
     <div class="ui horizontal divider">
-        Account
+        Conta
     </div>
 
     <div class="ui three column doubling grid cards">
@@ -141,7 +138,7 @@
     </div>
 
     <div class="ui horizontal divider">
-        Chat Management
+        Gerenciamento de bate-papo
     </div>
 
     <div class="ui three column doubling grid cards">
@@ -151,7 +148,14 @@
         <chat-messages></chat-messages>
     </div>
 
+    <div style="text-align: center; margin-top: 50px; margin-bottom: 30px; padding-bottom: 20px;">
+        <div style="display: inline-block; background-color: #00BFFF; color: white; padding: 12px 35px; border-radius: 50px; font-family: sans-serif; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            Desenvolvedor: Andredye Oliveira Melo -2025
+        </div>
+    </div>
+
 </div>
+
 <script>
     window.TYPEGROUP = "@g.us";
     window.TYPEUSER = "@s.whatsapp.net";

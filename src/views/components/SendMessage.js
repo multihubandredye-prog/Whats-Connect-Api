@@ -93,10 +93,10 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui blue right ribbon label">Send</a>
-            <div class="header">Send Message</div>
+            <a class="ui blue right ribbon label">Enviar</a>
+            <div class="header">Enviar Mensagem</div>
             <div class="description">
-                Send any message to user or group
+                Envie qualquer mensagem para um usuário ou grupo.
             </div>
         </div>
     </div>
@@ -105,31 +105,31 @@ export default {
     <div class="ui small modal" id="modalSendMessage">
         <i class="close icon"></i>
         <div class="header">
-            Send Message
+            Enviar Mensagem
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone" :show-status="true"/>
                 <div class="field" v-if="isShowReplyId()">
-                    <label>Reply Message ID</label>
+                    <label>ID da mensagem de resposta</label>
                     <input v-model="reply_message_id" type="text"
-                           placeholder="Optional: 57D29F74B7FC62F57D8AC2C840279B5B/3EB0288F008D32FCD0A424"
+                           placeholder="Opcional: 57D29F74B7FC62F57D8AC2C840279B5B/3EB0288F008D32FCD0A424"
                            aria-label="reply_message_id">
                 </div>
                 <div class="field">
-                    <label>Message</label>
-                    <textarea v-model="text" placeholder="Hello this is message text"
+                    <label>Mensagem</label>
+                    <textarea v-model="text" placeholder="Olá, este é um texto de mensagem"
                               aria-label="message"></textarea>
                 </div>
                 <div class="field" v-if="isShowReplyId()">
-                    <label>Is Forwarded</label>
+                    <label>Como Encaminhado</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="is forwarded" v-model="is_forwarded">
-                        <label>Mark message as forwarded</label>
+                        <label>Marcar mensagem como encaminhada</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Disappearing Duration (seconds)</label>
+                    <label>Duração de desaparecimento min 5 - max 7776000 (segundos)</label>
                     <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
                 </div>
             </form>
@@ -138,7 +138,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                  :class="{'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Send
+                Enviar
                 <i class="send icon"></i>
             </button>
         </div>

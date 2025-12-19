@@ -5,11 +5,11 @@ import (
 )
 
 var (
-	AppVersion             = "v7.11.0"
+	AppVersion             = "v1.0"
 	AppPort                = "3000"
 	AppSession             = "" // Adicionado
 	AppDebug               = false
-	AppOs                  = "AldinoKemal"
+	AppOs                  = "Whats Connect Api"
 	AppPlatform            = waCompanionReg.DeviceProps_PlatformType(1)
 	AppBasicAuthCredential []string
 	AppBasePath            = ""

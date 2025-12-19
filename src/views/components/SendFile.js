@@ -104,10 +104,10 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui blue right ribbon label">Send</a>
-            <div class="header">Send File</div>
+            <a class="ui blue right ribbon label">Enviar</a>
+            <div class="header">Enviar Arquivo</div>
             <div class="description">
-                Send any file up to
+                Enviar Arquivo de até
                 <div class="ui blue horizontal label">{{ maxFileSize }}</div>
             </div>
         </div>
@@ -117,34 +117,34 @@ export default {
     <div class="ui small modal" id="modalSendFile">
         <i class="close icon"></i>
         <div class="header">
-            Send File
+            Enviar Arquivo
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone"/>
                 
                 <div class="field">
-                    <label>Caption</label>
-                    <textarea v-model="caption" placeholder="Type some caption (optional)..."
+                    <label>Legenda</label>
+                    <textarea v-model="caption" placeholder="Digite a legenda (opcional)..."
                               aria-label="caption"></textarea>
                 </div>
                 <div class="field" v-if="isShowAttributes()">
-                    <label>Is Forwarded</label>
+                    <label>Como encaminhado</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="is forwarded" v-model="is_forwarded">
-                        <label>Mark file as forwarded</label>
+                        <label>Marcar arquivo como encaminhado</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Disappearing Duration (seconds)</label>
+                    <label>Duração de desaparecimento min 5 - max 7776000 (segundos)</label>
                     <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
                 </div>
                 <div class="field" style="padding-bottom: 30px">
-                    <label>File</label>
+                    <label>Arquivo</label>
                     <input type="file" style="display: none" id="file_file" @change="handleFileChange">
                     <label for="file_file" class="ui positive medium green left floated button" style="color: white">
                         <i class="ui upload icon"></i>
-                        Upload file
+                        Carregar arquivo
                     </label>
                     <div v-if="selectedFileName" style="margin-top: 60px; clear: both;">
                         <div class="ui message">
@@ -158,7 +158,7 @@ export default {
         <div class="actions">
             <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Send
+                Enviar
                 <i class="send icon"></i>
             </button>
         </div>

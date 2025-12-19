@@ -102,10 +102,10 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui blue right ribbon label">Send</a>
-            <div class="header">Send Poll</div>
+            <a class="ui blue right ribbon label">Enviar</a>
+            <div class="header">Enviar Enquete</div>
             <div class="description">
-                Send a poll/vote with multiple options
+                Enviar uma enquete/votação com várias opções
             </div>
         </div>
     </div>
@@ -114,22 +114,22 @@ export default {
     <div class="ui small modal" id="modalSendPoll">
         <i class="close icon"></i>
         <div class="header">
-            Send Poll
+            Enviar Enquete
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone"/>
                 
                 <div class="field">
-                    <label>Question</label>
-                    <input v-model="question" type="text" placeholder="Please enter question"
+                    <label>Pergunta</label>
+                    <input v-model="question" type="text" placeholder="Por favor insira a pergunta"
                            aria-label="poll question">
                 </div>
                 <div class="field">
-                    <label>Options</label>
+                    <label>Respostas</label>
                     <div style="display: flex; flex-direction: column; gap: 5px">
                         <div class="ui action input" :key="index" v-for="(option, index) in options">
-                            <input type="text" placeholder="Option..." v-model="options[index]"
+                            <input type="text" placeholder="Resposta..." v-model="options[index]"
                                    aria-label="poll option">
                             <button class="ui button" @click="deleteOption(index)" type="button">
                                 <i class="minus circle icon"></i>
@@ -137,21 +137,21 @@ export default {
                         </div>
                         <div class="field">
                             <button class="mini ui primary button" @click="addOption" type="button">
-                                <i class="plus icon"></i> Option
+                                <i class="plus icon"></i>
                             </button>
                         </div>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Max Answers Allowed</label>
+                    <label>Número máximo de respostas permitidas</label>
                     <input v-model.number="max_answer" type="number" placeholder="Maximum answers per user" 
                            aria-label="poll max answers" min="1" max="50">
                     <div class="ui pointing label">
-                        How many options each user can select
+                        Quantas opções cada usuário pode selecionar?
                     </div>
                 </div>
                 <div class="field">
-                    <label>Disappearing Duration (seconds)</label>
+                    <label>Duração de desaparecimento min 5 - max 7776000 (segundos)</label>
                     <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
                 </div>
             </form>
@@ -159,7 +159,7 @@ export default {
         <div class="actions">
             <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Send
+                Enviar
                 <i class="send icon"></i>
             </button>
         </div>

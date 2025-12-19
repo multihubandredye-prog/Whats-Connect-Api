@@ -103,10 +103,10 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui blue right ribbon label">Send</a>
-            <div class="header">Send Audio</div>
+            <a class="ui blue right ribbon label">Enviar</a>
+            <div class="header">Enviar Áudio</div>
             <div class="description">
-                Send audio to user or group
+                Enviar áudio para o usuário ou grupo
             </div>
         </div>
     </div>
@@ -115,37 +115,36 @@ export default {
     <div class="ui small modal" id="modalAudioSend">
         <i class="close icon"></i>
         <div class="header">
-            Send Audio
+            Enviar Áudio
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone"/>
                 <div class="field">
-                    <label>Is Forwarded</label>
+                    <label>Como encaminhado</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="is forwarded" v-model="is_forwarded">
-                        <label>Mark audio as forwarded</label>
+                        <label>Marcar áudio como encaminhado</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Disappearing Duration (seconds)</label>
+                    <label>Duração de desaparecimento min 5 - max 7776000 (segundos)</label>
                     <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
                 </div>
                 <div class="field">
-                    <label>Audio URL</label>
+                    <label>Áudio URL</label>
                     <input type="text" v-model="audio_url" placeholder="https://example.com/audio.mp3"
                            aria-label="audio_url"/>
                 </div>
-                <div style="text-align: left; font-weight: bold; margin: 10px 0;">or you can upload audio from your
-                    device
+                <div style="text-align: left; font-weight: bold; margin: 10px 0;">ou você pode enviar áudio do seu dispositivo
                 </div>
                 <div class="field" style="padding-bottom: 30px">
-                    <label>Audio</label>
+                    <label>Áudio</label>
                     <input type="file" style="display: none" accept="audio/*" id="file_audio"
                            @change="handleFileChange"/>
                     <label for="file_audio" class="ui positive medium green left floated button" style="color: white">
                         <i class="ui upload icon"></i>
-                        Upload
+                        Carregar Áudio
                     </label>
                     <div v-if="selectedFileName" style="margin-top: 60px">
                         <div class="ui message">
@@ -159,7 +158,7 @@ export default {
         <div class="actions">
             <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Send
+                Enviar
                 <i class="send icon"></i>
             </button>
         </div>

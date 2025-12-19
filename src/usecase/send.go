@@ -77,7 +77,7 @@ func (service serviceSend) wrapSendMessage(ctx context.Context, recipient types.
 }
 
 func (service serviceSend) SendText(ctx context.Context, request domainSend.MessageRequest) (response domainSend.GenericResponse, err error) {
-	err = validations.ValidateSendMessage(ctx, request)
+	err = validations.ValidateSendMessageJson(ctx, request)
 	if err != nil {
 		return response, err
 	}

@@ -80,6 +80,29 @@ func ValidateSendMessage(ctx context.Context, request domainSend.MessageRequest)
 	return nil
 }
 
+func ValidateSendMessageJson(ctx context.Context, request domainSend.MessageRequest) error {
+	err := validation.ValidateStructWithContext(ctx, &request,
+		validation.Field(&request.Phone, validation.Required),
+		validation.Field(&request.Message, validation.Required),
+	)
+
+	if err != nil {
+		return pkgError.ValidationError(err.Error())
+	}
+
+	// Custom validation for phone number format
+	if err := validatePhoneNumber(request.Phone); err != nil {
+		return err
+	}
+
+	// Custom validation for optional Duration
+	if err := validateDuration(request.Duration); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func ValidateSendImage(ctx context.Context, request domainSend.ImageRequest) error {
 	err := validation.ValidateStructWithContext(ctx, &request,
 		validation.Field(&request.Phone, validation.Required),

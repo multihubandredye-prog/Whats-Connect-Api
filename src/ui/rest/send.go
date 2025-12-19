@@ -26,12 +26,34 @@ func InitRestSend(app fiber.Router, service domainSend.ISendUsecase) Send {
 	app.Post("/send/chat-presence", rest.SendChatPresence)
 
 	// JSON Endpoints
+	app.Post("/send/json/message", rest.SendMessageJson)
 	app.Post("/send/json/image", rest.SendImageJson)
 	app.Post("/send/json/file", rest.SendFileJson)
 	app.Post("/send/json/video", rest.SendVideoJson)
 	app.Post("/send/json/audio", rest.SendAudioJson)
 	return rest
 }
+
+func (controller *Send) SendMessageJson(c *fiber.Ctx) error {
+	var request domainSend.MessageRequest
+	err := c.BodyParser(&request)
+	utils.PanicIfNeeded(err)
+
+	utils.SanitizePhone(&request.Phone)
+
+	response, err := controller.Service.SendText(c.UserContext(), request)
+	utils.PanicIfNeeded(err)
+
+	return c.JSON(utils.ResponseData{
+		Status:  200,
+		Code:    "SUCCESS",
+		Message: response.Status,
+		Results: response,
+	})
+}
+
+
+
 
 func (controller *Send) SendImageJson(c *fiber.Ctx) error {
 	var request domainSend.ImageRequest

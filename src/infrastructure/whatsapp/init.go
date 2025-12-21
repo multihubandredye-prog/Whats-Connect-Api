@@ -1191,18 +1191,27 @@ func handleCallOfferEvent(ctx context.Context, evt *events.CallOffer) {
 	payload["port"] = config.AppPort // Adicionar a porta
 
 	// my_self - para CallOffer, é sempre false, pois é uma oferta recebida
-	payload["my_self"] = false 
-
-	// number_call
-	if !evt.CallCreatorAlt.IsEmpty() { // CallCreatorAlt é o PN se o CallCreator for LID
-		payload["number_call"] = evt.CallCreatorAlt.User
+	// number_call & name_call
+	var contactJID types.JID
+	if !evt.CallCreatorAlt.IsEmpty() {
+		// If CallCreatorAlt is available (which is the real JID), use it directly.
+		contactJID = evt.CallCreatorAlt
+	} else {
+		// Otherwise, CallCreator is likely a LID JID, so try to resolve it to a real JID.
+		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreator, cli)
 	}
 
-	// name_call
-	contact, err := cli.Store.Contacts.GetContact(ctx, evt.From) // evt.From é o JID do chamador (corrigido)
+	// Add number_call to payload if we have a valid phone number JID.
+	if !contactJID.IsEmpty() && contactJID.Server == types.DefaultUserServer {
+		payload["number_call"] = contactJID.User
+	}
+
+	// Use the resolved JID to get contact information.
+	contact, err := cli.Store.Contacts.GetContact(ctx, contactJID)
 	if err != nil {
-		log.Warnf("Failed to get contact info for %s: %v", evt.From.String(), err)
-	} else if contact.Found && contact.PushName != "" { // corrigido para contact.Found
+		log.Warnf("Failed to get contact info for %s: %v", contactJID.String(), err)
+	}
+	if contact.Found && contact.PushName != "" {
 		payload["name_call"] = contact.PushName
 	} else {
 		payload["name_call"] = "Unknown" // Default if pushname not found
@@ -1258,16 +1267,27 @@ func handleCallTerminateEvent(ctx context.Context, evt *events.CallTerminate) {
 	myJID := cli.Store.ID.String()
 	payload["closed_by_me"] = (evt.From.String() == myJID)
 
-	// number_call
-	if !evt.CallCreatorAlt.IsEmpty() { // CallCreatorAlt é o PN se o CallCreator for LID
-		payload["number_call"] = evt.CallCreatorAlt.User
+	// number_call & name_call
+	var contactJID types.JID
+	if !evt.CallCreatorAlt.IsEmpty() {
+		// If CallCreatorAlt is available (which is the real JID), use it directly.
+		contactJID = evt.CallCreatorAlt
+	} else {
+		// Otherwise, CallCreator is likely a LID JID, so try to resolve it to a real JID.
+		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreator, cli)
 	}
 
-	// name_call
-	contact, err := cli.Store.Contacts.GetContact(ctx, evt.From) // evt.From é o JID do terminador (corrigido)
+	// Add number_call to payload if we have a valid phone number JID.
+	if !contactJID.IsEmpty() && contactJID.Server == types.DefaultUserServer {
+		payload["number_call"] = contactJID.User
+	}
+
+	// Use the resolved JID to get contact information.
+	contact, err := cli.Store.Contacts.GetContact(ctx, contactJID)
 	if err != nil {
-		log.Warnf("Failed to get contact info for %s: %v", evt.From.String(), err)
-	} else if contact.Found && contact.PushName != "" { // corrigido para contact.Found
+		log.Warnf("Failed to get contact info for %s: %v", contactJID.String(), err)
+	}
+	if contact.Found && contact.PushName != "" {
 		payload["name_call"] = contact.PushName
 	} else {
 		payload["name_call"] = "Unknown" // Default if pushname not found

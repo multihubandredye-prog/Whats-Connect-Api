@@ -524,6 +524,10 @@ func handler(ctx context.Context, rawEvt any, chatStorageRepo domainChatStorage.
 		handleAppState(ctx, evt)
 	case *events.GroupInfo:
 		handleGroupInfo(ctx, evt)
+	case *events.CallOffer: // Handle incoming call offers
+		handleCallOfferEvent(ctx, evt)
+	case *events.CallTerminate: // Handle call termination
+		handleCallTerminateEvent(ctx, evt)
 	}
 }
 
@@ -1170,5 +1174,106 @@ func handleGroupInfo(ctx context.Context, evt *events.GroupInfo) {
 				logrus.Errorf("Failed to forward group info event to webhook: %v", err)
 			}
 		}(evt)
+	}
+}
+
+// handleCallOfferEvent handles incoming call offer events
+func handleCallOfferEvent(ctx context.Context, evt *events.CallOffer) {
+	log.Infof("Received call offer event: %+v", evt)
+
+	payload := make(map[string]any)
+	payload["call_action"] = "receiving_calls"
+	payload["call_id"] = string(evt.CallID) // Usar CallID da BasicCallMeta (corrigido)
+	payload["call_creator"] = evt.CallCreator.String() // Usar CallCreator da BasicCallMeta
+	payload["offer_timestamp"] = evt.Timestamp.Format(time.RFC3339) // Usar Timestamp da BasicCallMeta (corrigido)
+	payload["call_lid"] = evt.From.String() // BasicCallMeta.From
+	payload["timestamp"] = evt.Timestamp.Format(time.RFC3339) // BasicCallMeta.Timestamp
+	payload["port"] = config.AppPort // Adicionar a porta
+
+	// my_self - para CallOffer, é sempre false, pois é uma oferta recebida
+	payload["my_self"] = false 
+
+	// number_call
+	if !evt.CallCreatorAlt.IsEmpty() { // CallCreatorAlt é o PN se o CallCreator for LID
+		payload["number_call"] = evt.CallCreatorAlt.User
+	}
+
+	// name_call
+	contact, err := cli.Store.Contacts.GetContact(ctx, evt.From) // evt.From é o JID do chamador (corrigido)
+	if err != nil {
+		log.Warnf("Failed to get contact info for %s: %v", evt.From.String(), err)
+	} else if contact.Found && contact.PushName != "" { // corrigido para contact.Found
+		payload["name_call"] = contact.PushName
+	} else {
+		payload["name_call"] = "Unknown" // Default if pushname not found
+	}
+
+	// is_group_call
+	payload["is_group_call"] = !evt.GroupJID.IsEmpty() // Se GroupJID não estiver vazio, é uma chamada em grupo
+
+	// type_call (audio/video) - ainda precisa ser extraído do evt.Data *binary.Node
+	offerNode := evt.Data
+	if offerNode == nil {
+		log.Warnf("CallOffer event received with nil Data: %+v", evt.Data)
+		return
+	}
+	
+	isVideo := false
+	for _, child := range offerNode.GetChildren() {
+		if child.Tag == "video" {
+			isVideo = true
+			break
+		}
+	}
+
+	if isVideo {
+		payload["type_call"] = "video"
+	} else {
+		payload["type_call"] = "audio"
+	}
+
+	if err := forwardPayloadToConfiguredWebhooks(ctx, payload, "call offer event"); err != nil {
+		log.Errorf("Failed to forward call offer event to webhook: %v", err)
+	}
+}// handleCallTerminateEvent handles call termination events
+func handleCallTerminateEvent(ctx context.Context, evt *events.CallTerminate) {
+	log.Infof("Received call terminate event: %+v", evt)
+
+	payload := make(map[string]any)
+	payload["call_action"] = "call_terminate"
+	payload["call_id"] = evt.CallID // BasicCallMeta.CallID
+	payload["call_creator"] = evt.CallCreator.String() // BasicCallMeta.CallCreator
+	payload["call_lid"] = evt.From.String()            // BasicCallMeta.From
+
+	// Set shutdown_causer based on evt.Reason
+	shutdownCauser := evt.Reason
+	if evt.Reason == "rejected_elsewhere" {
+		shutdownCauser = "my_self"
+	} else if evt.Reason == "" { // When the other user hangs up
+		shutdownCauser = "sender_hung_up"
+	}
+	payload["shutdown_causer"] = shutdownCauser
+
+	// closed_by_me
+	myJID := cli.Store.ID.String()
+	payload["closed_by_me"] = (evt.From.String() == myJID)
+
+	// number_call
+	if !evt.CallCreatorAlt.IsEmpty() { // CallCreatorAlt é o PN se o CallCreator for LID
+		payload["number_call"] = evt.CallCreatorAlt.User
+	}
+
+	// name_call
+	contact, err := cli.Store.Contacts.GetContact(ctx, evt.From) // evt.From é o JID do terminador (corrigido)
+	if err != nil {
+		log.Warnf("Failed to get contact info for %s: %v", evt.From.String(), err)
+	} else if contact.Found && contact.PushName != "" { // corrigido para contact.Found
+		payload["name_call"] = contact.PushName
+	} else {
+		payload["name_call"] = "Unknown" // Default if pushname not found
+	}
+
+	if err := forwardPayloadToConfiguredWebhooks(ctx, payload, "call terminate event"); err != nil {
+		log.Errorf("Failed to forward call terminate event to webhook: %v", err)
 	}
 }

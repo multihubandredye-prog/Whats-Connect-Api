@@ -103,13 +103,48 @@ func createMessagePayload(ctx context.Context, evt *events.Message) (map[string]
 		}
 	}
 	if message.ID != "" {
-		// Diferenciar entre mensagens de emoji e texto
-		isEmoji, _ := regexp.MatchString(`^(\p{So}|\p{Sk}|\p{S})+$`, message.Text)
-		if isEmoji && message.Text != "" {
-			type_message = "emoji_message"
-		} else {
-			type_message = "text_message"
+		conversationText := evt.Message.GetConversation()
+		if conversationText == "" {
+			if extendedText := evt.Message.GetExtendedTextMessage(); extendedText != nil {
+				conversationText = extendedText.GetText()
+			}
 		}
+
+		lowerCaseText := strings.ToLower(conversationText)
+		logrus.Infof("Received message conversation text: %s", conversationText) // DEBUG LOG
+		logrus.Infof("Received message conversation text: %s", conversationText) // DEBUG LOG
+
+		isCallMessage := false // Flag para indicar se é uma mensagem de chamada
+
+		if strings.Contains(lowerCaseText, "chamada de voz perdida") {
+			body["type_message"] = "call_event"
+			body["type_call"] = "audio_missed"
+			isCallMessage = true
+		} else if strings.Contains(lowerCaseText, "chamada de vídeo perdida") {
+			body["type_message"] = "call_event"
+			body["type_call"] = "video_missed"
+			isCallMessage = true
+		} else if strings.Contains(lowerCaseText, "chamada de voz") && !strings.Contains(lowerCaseText, "perdida") {
+			body["type_message"] = "call_event"
+			body["type_call"] = "audio"
+			isCallMessage = true
+		} else if strings.Contains(lowerCaseText, "chamada de vídeo") && !strings.Contains(lowerCaseText, "perdida") {
+			body["type_message"] = "call_event"
+			body["type_call"] = "video"
+			isCallMessage = true
+		}
+
+		if !isCallMessage { // Se não for uma mensagem de chamada, processa como texto/emoji
+			isEmoji, _ := regexp.MatchString(`^(\p{So}|\p{Sk}|\p{S})+$`, message.Text)
+			if isEmoji && message.Text != "" {
+				type_message = "emoji_message"
+			} else {
+				type_message = "text_message"
+			}
+			body["type_message"] = type_message
+		}
+		logrus.Infof("Call message detected: %t, type_call: %v, type_message: %v", isCallMessage, body["type_call"], body["type_message"]) // DEBUG LOG
+		logrus.Infof("Call message detected: %t, type_call: %v, type_message: %v", isCallMessage, body["type_call"], body["type_message"]) // DEBUG LOG
 
 		tags := regexp.MustCompile(`\B@\w+`).FindAllString(message.Text, -1)
 		tagsMap := make(map[string]bool)
@@ -441,6 +476,7 @@ func createMessagePayload(ctx context.Context, evt *events.Message) (map[string]
 	if extension_arq != "" {
 		body["extension_arq"] = extension_arq
 	}
+	logrus.Infof("Final message payload: %+v", body) // DEBUG LOG
 
 	return body, nil
 }

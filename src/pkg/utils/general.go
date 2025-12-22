@@ -20,9 +20,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/PuerkitoBio/goquery"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
-	"github.com/sirupsen/logrus"
 	_ "golang.org/x/image/webp" // Register WebP format
 )
 
@@ -475,6 +476,16 @@ func FormatBusinessHourTime(timeValue any) string {
 	return fmt.Sprintf("%02d:%02d", hours, minutes)
 }
 
+var knownMIMEExtensions = map[string]string{
+	"video/mp4": ".mp4",
+	"image/jpeg": ".jpeg",
+	"image/png": ".png",
+	"image/gif": ".gif",
+	"application/pdf": ".pdf",
+	"application/zip": ".zip",
+	// Add other common MIME types as needed
+}
+
 // SaveBase64ToFile decodes a base64 string and saves it to a file.
 // It handles base64 strings with or without a MIME type prefix.
 func SaveBase64ToFile(base64Str, fileNamePrefix string) (filePath, fileName string, err error) {
@@ -492,11 +503,24 @@ func SaveBase64ToFile(base64Str, fileNamePrefix string) (filePath, fileName stri
 
 	// Detect content type to get the correct file extension
 	mimeType := http.DetectContentType(decodedData)
-	extensions, err := mime.ExtensionsByType(mimeType)
-	if err != nil || len(extensions) == 0 {
+	logrus.Debugf("Detected MIME type for base64 file: %s", mimeType)
+
+	var extension string // Declared once here
+
+	// Try custom known MIME extensions first
+	if ext, ok := knownMIMEExtensions[mimeType]; ok {
+		extension = ext // Assign to already declared variable
+	} else {
+		// Fallback to standard mime package
+		extensions, _ := mime.ExtensionsByType(mimeType)
+		if len(extensions) > 0 {
+			extension = extensions[0] // Assign to already declared variable
+		}
+	}
+
+	if extension == "" { // Check if extension was successfully determined
 		return "", "", fmt.Errorf("could not determine file extension for MIME type %s", mimeType)
 	}
-	extension := extensions[0]
 
 	// Generate a unique filename
 	fileName = fmt.Sprintf("%s-%d%s", fileNamePrefix, time.Now().UnixNano(), extension)
@@ -560,6 +584,10 @@ func DownloadFileFromURL(fileURL string) ([]byte, string, error) {
 	if fileName == "" {
 		fileName = fmt.Sprintf("file_%d", time.Now().Unix())
 	}
-
 	return fileData, fileName, nil
 }
+
+func init() {
+	mime.AddExtensionType("video/mp4", ".mp4")
+}
+

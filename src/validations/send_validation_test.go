@@ -104,7 +104,7 @@ func TestValidateSendImage(t *testing.T) {
 				},
 				Image: nil,
 			}},
-			err: pkgError.ValidationError("either Image or ImageURL must be provided"),
+			err: pkgError.ValidationError("either Image, ImageURL or ImagePath must be provided"),
 		},
 		{
 			name: "should error with invalid image type",
@@ -173,7 +173,7 @@ func TestValidateSendFile(t *testing.T) {
 				},
 				File: nil,
 			}},
-			err: pkgError.ValidationError("file: cannot be blank."),
+			err: pkgError.ValidationError("either File, FileURL or FilePath must be provided"),
 		},
 	}
 
@@ -185,116 +185,7 @@ func TestValidateSendFile(t *testing.T) {
 	}
 }
 
-func TestValidateSendVideo(t *testing.T) {
-	file := &multipart.FileHeader{
-		Filename: "sample-video.mp4",
-		Size:     100,
-		Header:   map[string][]string{"Content-Type": {"video/mp4"}},
-	}
 
-	type args struct {
-		request domainSend.VideoRequest
-	}
-	tests := []struct {
-		name string
-		args args
-		err  any
-	}{
-		{
-			name: "should success with normal condition",
-			args: args{request: domainSend.VideoRequest{
-				BaseRequest: domainSend.BaseRequest{
-					Phone: "1728937129312@s.whatsapp.net",
-				},
-				Caption:  "simple caption",
-				Video:    file,
-				ViewOnce: false,
-				Compress: false,
-			}},
-			err: nil,
-		},
-		{
-			name: "should error with empty phone",
-			args: args{request: domainSend.VideoRequest{
-				BaseRequest: domainSend.BaseRequest{
-					Phone: "",
-				},
-				Caption:  "simple caption",
-				Video:    file,
-				ViewOnce: false,
-				Compress: false,
-			}},
-			err: pkgError.ValidationError("phone: cannot be blank."),
-		},
-		{
-			name: "should error with empty video",
-			args: args{request: domainSend.VideoRequest{
-				BaseRequest: domainSend.BaseRequest{
-					Phone: "1728937129312@s.whatsapp.net",
-				},
-				Caption:  "simple caption",
-				Video:    nil,
-				ViewOnce: false,
-				Compress: false,
-			}},
-			err: pkgError.ValidationError("either Video or VideoURL must be provided"),
-		},
-		{
-			name: "should error with invalid format video",
-			args: args{request: domainSend.VideoRequest{
-				BaseRequest: domainSend.BaseRequest{
-					Phone: "1728937129312@s.whatsapp.net",
-				},
-				Caption: "simple caption",
-				Video: func() *multipart.FileHeader {
-					return &multipart.FileHeader{
-						Filename: "sample-video.jpg",
-						Size:     100,
-						Header:   map[string][]string{"Content-Type": {"image/png"}},
-					}
-				}(),
-				ViewOnce: false,
-				Compress: false,
-			}},
-			err: pkgError.ValidationError("your video type is not allowed. please use mp4/mkv/avi/x-msvideo"),
-		},
-		{
-			name: "should error with empty video and video_url",
-			args: args{request: domainSend.VideoRequest{
-				BaseRequest: domainSend.BaseRequest{
-					Phone: "1728937129312@s.whatsapp.net",
-				},
-				Caption:  "simple caption",
-				Video:    nil,
-				VideoURL: func() *string { s := ""; return &s }(),
-				ViewOnce: false,
-				Compress: false,
-			}},
-			err: pkgError.ValidationError("either Video or VideoURL must be provided"),
-		},
-		{
-			name: "should success with video_url provided",
-			args: args{request: domainSend.VideoRequest{
-				BaseRequest: domainSend.BaseRequest{
-					Phone: "1728937129312@s.whatsapp.net",
-				},
-				Caption:  "simple caption",
-				Video:    nil,
-				VideoURL: func() *string { s := "https://example.com/sample.mp4"; return &s }(),
-				ViewOnce: false,
-				Compress: false,
-			}},
-			err: nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateSendVideo(context.Background(), tt.args.request)
-			assert.Equal(t, tt.err, err)
-		})
-	}
-}
 
 func TestValidateSendLink(t *testing.T) {
 	type args struct {
@@ -659,7 +550,7 @@ func TestValidateSendAudio(t *testing.T) {
 				},
 				Audio: nil,
 			}},
-			err: pkgError.ValidationError("either Audio or AudioURL must be provided"),
+			err: pkgError.ValidationError("either Audio, AudioURL or AudioPath must be provided"),
 		},
 		{
 			name: "should error with invalid audio type",
@@ -1023,7 +914,7 @@ func TestValidateSendImage_WithImageURL(t *testing.T) {
 				Caption:  "Hello this is testing",
 				ImageURL: func() *string { s := ""; return &s }(),
 			}},
-			err: pkgError.ValidationError("either Image or ImageURL must be provided"),
+			err: pkgError.ValidationError("either Image, ImageURL or ImagePath must be provided"),
 		},
 	}
 

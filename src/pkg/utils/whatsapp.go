@@ -31,6 +31,7 @@ var knownDocumentMIMEByExtension = map[string]string{
 	".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 	".ppt":  "application/vnd.ms-powerpoint",
 	".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+	".zip":  "application/zip",
 }
 
 var knownDocumentExtensionByMIME map[string]string
@@ -652,10 +653,10 @@ func MustLogin(client *whatsmeow.Client) {
 
 // Internal message types for event handling
 type EvtMessage struct {
-	Text          string `json:"text"`
+	Message       string `json:"Caption"`
 	ID            string `json:"id"`
-	RepliedId     string `json:"replied_id"`
-	QuotedMessage string `json:"quoted_message"`
+	RepliedID     string `json:"replied_id"`
+	QuotedMessage string `json:"quotedMessage"`
 }
 
 type EvtReaction struct {
@@ -675,19 +676,40 @@ func GetMessageDigestOrSignature(msg, key []byte) (string, error) {
 
 // BuildEventMessage builds event message structure
 func BuildEventMessage(evt *events.Message) (message EvtMessage) {
-	message.Text = evt.Message.GetConversation()
 	message.ID = evt.Info.ID
 
-	if extendedMessage := evt.Message.GetExtendedTextMessage(); extendedMessage != nil {
-		message.Text = extendedMessage.GetText()
-		message.RepliedId = extendedMessage.ContextInfo.GetStanzaID()
+	// Prioritize media captions
+	if img := evt.Message.GetImageMessage(); img != nil && img.GetCaption() != "" {
+		message.Message = img.GetCaption()
+		return message
+	}
+	if vid := evt.Message.GetVideoMessage(); vid != nil && vid.GetCaption() != "" {
+		message.Message = vid.GetCaption()
+		return message
+	}
+	if doc := evt.Message.GetDocumentMessage(); doc != nil && doc.GetCaption() != "" {
+		message.Message = doc.GetCaption()
+		return message
+	}
+    if ptv := evt.Message.GetPtvMessage(); ptv != nil && ptv.GetCaption() != "" {
+        message.Message = ptv.GetCaption()
+        return message
+    }
+
+
+	// Fallback to text messages
+	if conv := evt.Message.GetConversation(); conv != "" {
+		message.Message = conv
+	} else if extendedMessage := evt.Message.GetExtendedTextMessage(); extendedMessage != nil {
+		message.Message = extendedMessage.GetText()
+		message.RepliedID = extendedMessage.ContextInfo.GetStanzaID()
 		message.QuotedMessage = extendedMessage.ContextInfo.GetQuotedMessage().GetConversation()
 	} else if protocolMessage := evt.Message.GetProtocolMessage(); protocolMessage != nil {
 		if editedMessage := protocolMessage.GetEditedMessage(); editedMessage != nil {
-			if extendedText := editedMessage.GetExtendedTextMessage(); extendedText != nil {
-				message.Text = extendedText.GetText()
-				message.RepliedId = extendedText.ContextInfo.GetStanzaID()
-				message.QuotedMessage = extendedText.ContextInfo.GetQuotedMessage().GetConversation()
+			if conv := editedMessage.GetConversation(); conv != "" {
+				message.Message = conv
+			} else if ext := editedMessage.GetExtendedTextMessage(); ext != nil {
+				message.Message = ext.GetText()
 			}
 		}
 	}

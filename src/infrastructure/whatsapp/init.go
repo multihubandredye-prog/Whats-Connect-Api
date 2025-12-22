@@ -1181,119 +1181,133 @@ func handleGroupInfo(ctx context.Context, evt *events.GroupInfo) {
 func handleCallOfferEvent(ctx context.Context, evt *events.CallOffer) {
 	log.Infof("Received call offer event: %+v", evt)
 
+	outerBody := make(map[string]any)
 	payload := make(map[string]any)
-	payload["call_action"] = "receiving_calls"
-	payload["call_id"] = string(evt.CallID) // Usar CallID da BasicCallMeta (corrigido)
-	payload["call_creator"] = evt.CallCreator.String() // Usar CallCreator da BasicCallMeta
-	payload["offer_timestamp"] = evt.Timestamp.Format(time.RFC3339) // Usar Timestamp da BasicCallMeta (corrigido)
-	payload["call_lid"] = evt.From.String() // BasicCallMeta.From
-	payload["timestamp"] = evt.Timestamp.Format(time.RFC3339) // BasicCallMeta.Timestamp
-	payload["port"] = config.AppPort // Adicionar a porta
+	client := GetClient()
 
-	// my_self - para CallOffer, é sempre false, pois é uma oferta recebida
-	// number_call & name_call
+	outerBody["event"] = "receiving_call"
+
+	loc, err := time.LoadLocation("America/Sao_Paulo")
+	var formattedTimestamp string
+	if err == nil {
+		formattedTimestamp = evt.Timestamp.In(loc).Format("02/01/2006 15:04")
+	} else {
+		formattedTimestamp = evt.Timestamp.Format("02/01/2006 15:04")
+		log.Warnf("Could not load America/Sao_Paulo timezone, falling back to UTC: %v", err)
+	}
+	outerBody["timestamp"] = formattedTimestamp
+	payload["timeStamp"] = formattedTimestamp
+
+	payload["callId"] = string(evt.CallID)
+	payload["callLid"] = evt.From.String()
+	payload["Port"] = config.AppPort
+
+	payload["isGroupCall"] = !evt.GroupJID.IsEmpty()
+
 	var contactJID types.JID
 	if !evt.CallCreatorAlt.IsEmpty() {
-		// If CallCreatorAlt is available (which is the real JID), use it directly.
 		contactJID = evt.CallCreatorAlt
 	} else {
-		// Otherwise, CallCreator is likely a LID JID, so try to resolve it to a real JID.
-		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreator, cli)
+		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreator, client)
 	}
 
-	// Add number_call to payload if we have a valid phone number JID.
-	if !contactJID.IsEmpty() && contactJID.Server == types.DefaultUserServer {
-		payload["number_call"] = contactJID.User
-	}
-
-	// Use the resolved JID to get contact information.
-	contact, err := cli.Store.Contacts.GetContact(ctx, contactJID)
-	if err != nil {
-		log.Warnf("Failed to get contact info for %s: %v", contactJID.String(), err)
-	}
-	if contact.Found && contact.PushName != "" {
-		payload["name_call"] = contact.PushName
-	} else {
-		payload["name_call"] = "Unknown" // Default if pushname not found
-	}
-
-	// is_group_call
-	payload["is_group_call"] = !evt.GroupJID.IsEmpty() // Se GroupJID não estiver vazio, é uma chamada em grupo
-
-	// type_call (audio/video) - ainda precisa ser extraído do evt.Data *binary.Node
-	offerNode := evt.Data
-	if offerNode == nil {
-		log.Warnf("CallOffer event received with nil Data: %+v", evt.Data)
-		return
-	}
+	payload["senderNumberCall"] = contactJID.User
 	
+	contact, err := client.Store.Contacts.GetContact(ctx, contactJID)
+	if err == nil && contact.Found && contact.PushName != "" {
+		payload["senderPushnameCall"] = contact.PushName
+	} else {
+		payload["senderPushnameCall"] = "Unknown"
+	}
+
+	if client.Store != nil && client.Store.PushName != "" {
+		payload["receiverPushnameCall"] = client.Store.PushName
+	} else {
+		payload["receiverPushnameCall"] = "Unknown"
+	}
+
 	isVideo := false
-	for _, child := range offerNode.GetChildren() {
-		if child.Tag == "video" {
-			isVideo = true
-			break
+	if evt.Data != nil {
+		for _, child := range evt.Data.GetChildren() {
+			if child.Tag == "video" {
+				isVideo = true
+				break
+			}
 		}
 	}
-
 	if isVideo {
-		payload["type_call"] = "video"
+		payload["typeCall"] = "video"
 	} else {
-		payload["type_call"] = "audio"
+		payload["typeCall"] = "audio"
 	}
 
-	if err := forwardPayloadToConfiguredWebhooks(ctx, payload, "call offer event"); err != nil {
+	outerBody["payload"] = payload
+	if err := forwardPayloadToConfiguredWebhooks(ctx, outerBody, "call offer event"); err != nil {
 		log.Errorf("Failed to forward call offer event to webhook: %v", err)
 	}
 }// handleCallTerminateEvent handles call termination events
 func handleCallTerminateEvent(ctx context.Context, evt *events.CallTerminate) {
 	log.Infof("Received call terminate event: %+v", evt)
 
+	outerBody := make(map[string]any)
 	payload := make(map[string]any)
-	payload["call_action"] = "call_terminate"
-	payload["call_id"] = evt.CallID // BasicCallMeta.CallID
-	payload["call_creator"] = evt.CallCreator.String() // BasicCallMeta.CallCreator
-	payload["call_lid"] = evt.From.String()            // BasicCallMeta.From
+	client := GetClient()
 
-	// Set shutdown_causer based on evt.Reason
+	outerBody["event"] = "call_terminate"
+
+	loc, err := time.LoadLocation("America/Sao_Paulo")
+	var formattedTimestamp string
+	if err == nil {
+		formattedTimestamp = evt.Timestamp.In(loc).Format("02/01/2006 15:04")
+	} else {
+		formattedTimestamp = evt.Timestamp.Format("02/01/2006 15:04")
+		log.Warnf("Could not load America/Sao_Paulo timezone, falling back to UTC: %v", err)
+	}
+	outerBody["timestamp"] = formattedTimestamp
+	payload["timeStamp"] = formattedTimestamp
+
+	payload["callId"] = evt.CallID
+	payload["callLid"] = evt.From.String()
+
 	shutdownCauser := evt.Reason
 	if evt.Reason == "rejected_elsewhere" {
-		shutdownCauser = "my_self"
-	} else if evt.Reason == "" { // When the other user hangs up
+		shutdownCauser = "my_Self"
+	} else if evt.Reason == "" {
 		shutdownCauser = "sender_hung_up"
 	}
-	payload["shutdown_causer"] = shutdownCauser
+	payload["shutdownCauser"] = shutdownCauser
 
-	// closed_by_me
-	myJID := cli.Store.ID.String()
-	payload["closed_by_me"] = (evt.From.String() == myJID)
-
-	// number_call & name_call
+	myJID := client.Store.ID
+	if myJID != nil {
+		payload["closedByMe"] = (evt.From.String() == myJID.String())
+	} else {
+		payload["closedByMe"] = false
+	}
+	
 	var contactJID types.JID
 	if !evt.CallCreatorAlt.IsEmpty() {
-		// If CallCreatorAlt is available (which is the real JID), use it directly.
 		contactJID = evt.CallCreatorAlt
 	} else {
-		// Otherwise, CallCreator is likely a LID JID, so try to resolve it to a real JID.
-		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreator, cli)
+		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreator, client)
 	}
 
-	// Add number_call to payload if we have a valid phone number JID.
-	if !contactJID.IsEmpty() && contactJID.Server == types.DefaultUserServer {
-		payload["number_call"] = contactJID.User
-	}
-
-	// Use the resolved JID to get contact information.
-	contact, err := cli.Store.Contacts.GetContact(ctx, contactJID)
-	if err != nil {
-		log.Warnf("Failed to get contact info for %s: %v", contactJID.String(), err)
-	}
-	if contact.Found && contact.PushName != "" {
-		payload["name_call"] = contact.PushName
+	payload["senderNumberCall"] = contactJID.User
+	
+	contact, err := client.Store.Contacts.GetContact(ctx, contactJID)
+	if err == nil && contact.Found && contact.PushName != "" {
+		payload["senderPushnameCall"] = contact.PushName
 	} else {
-		payload["name_call"] = "Unknown" // Default if pushname not found
+		payload["senderPushnameCall"] = "Unknown"
 	}
 
-	if err := forwardPayloadToConfiguredWebhooks(ctx, payload, "call terminate event"); err != nil {
+	if client.Store != nil && client.Store.PushName != "" {
+		payload["receiverPushnameCall"] = client.Store.PushName
+	} else {
+		payload["receiverPushnameCall"] = "Unknown"
+	}
+
+	outerBody["payload"] = payload
+	if err := forwardPayloadToConfiguredWebhooks(ctx, outerBody, "call terminate event"); err != nil {
 		log.Errorf("Failed to forward call terminate event to webhook: %v", err)
 	}
 }

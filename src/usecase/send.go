@@ -28,6 +28,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 	"go.mau.fi/whatsmeow"
+	wtypes "go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
 	"google.golang.org/protobuf/proto"
@@ -937,24 +938,31 @@ func (service serviceSend) SendChatPresence(ctx context.Context, request domainS
 		return response, err
 	}
 
-	var presenceType types.ChatPresence
+	var presenceType wtypes.ChatPresence
 	var messageID string
 	var statusMessage string
-
+	var mediaType wtypes.ChatPresenceMedia
 	switch request.Action {
 	case "start":
-		presenceType = types.ChatPresenceComposing
+		presenceType = wtypes.ChatPresenceComposing
 		messageID = "chat-presence-start"
 		statusMessage = fmt.Sprintf("Send chat presence start typing success %s", request.Phone)
+		mediaType = wtypes.ChatPresenceMedia("")
 	case "stop":
-		presenceType = types.ChatPresencePaused
+		presenceType = wtypes.ChatPresencePaused
 		messageID = "chat-presence-stop"
 		statusMessage = fmt.Sprintf("Send chat presence stop typing success %s", request.Phone)
+		mediaType = wtypes.ChatPresenceMedia("")
+	case "recording":
+		presenceType = wtypes.ChatPresenceComposing
+		mediaType = wtypes.ChatPresenceMedia("audio")
+		messageID = "chat-presence-recording"
+		statusMessage = fmt.Sprintf("Send chat presence start recording success %s", request.Phone)
 	default:
-		return response, fmt.Errorf("invalid action: %s. Must be 'start' or 'stop'", request.Action)
+		return response, fmt.Errorf("invalid action: %s. Must be 'start', 'stop' or 'recording'", request.Action)
 	}
 
-	err = whatsapp.GetClient().SendChatPresence(ctx, userJid, presenceType, types.ChatPresenceMedia(""))
+	err = whatsapp.GetClient().SendChatPresence(ctx, userJid, presenceType, mediaType)
 	if err != nil {
 		return response, err
 	}

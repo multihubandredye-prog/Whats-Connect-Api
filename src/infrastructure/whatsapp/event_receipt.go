@@ -11,13 +11,13 @@ import (
 func getReceiptTypeDescription(evt types.ReceiptType) string {
 	switch evt {
 	case types.ReceiptTypeDelivered:
-		return "means the message was delivered to the device (but the user might not have noticed)."
+		return "Significa que a mensagem foi entregue ao dispositivo (mas o usuário pode não ter percebido)."
 	case types.ReceiptTypeSender:
 		return "sent by your other devices when a message you sent is delivered to them."
 	case types.ReceiptTypeRetry:
 		return "the message was delivered to the device, but decrypting the message failed."
 	case types.ReceiptTypeRead:
-		return "the user opened the chat and saw the message."
+		return "O usuário abriu o chat e viu a mensagem."
 	case types.ReceiptTypeReadSelf:
 		return "the current user read a message from a different device, and has read receipts disabled in privacy settings."
 	case types.ReceiptTypePlayed:
@@ -33,10 +33,8 @@ func getReceiptTypeDescription(evt types.ReceiptType) string {
 }
 
 // createReceiptPayload creates a webhook payload for message acknowledgement (receipt) events
-func createReceiptPayload(evt *events.Receipt) map[string]any {
-	body := make(map[string]any)
-
-	// Create payload structure matching the expected format
+func createReceiptPayload(ctx context.Context, evt *events.Receipt) map[string]any {
+	outerBody := make(map[string]any)
 	payload := make(map[string]any)
 
 	// Add message ID (use first message ID if multiple)
@@ -44,42 +42,51 @@ func createReceiptPayload(evt *events.Receipt) map[string]any {
 		payload["ids"] = evt.MessageIDs
 	}
 
-	// Add from field (the chat where the message was sent)
-	payload["chat_id"] = evt.Chat
-	payload["sender_id"] = evt.Sender
-	payload["from"] = evt.SourceString()
+	client := GetClient()
+	if client != nil {
+		realJID := NormalizeJIDFromLID(ctx, evt.Chat, client)
+		contact, err := client.Store.Contacts.GetContact(ctx, realJID)
+		if err == nil && contact.Found {
+			payload["senderPushname"] = contact.PushName
+		}
+
+		payload["receiverNumber"] = realJID.User
+		if evt.Chat.Server == "lid" {
+			payload["userLid"] = evt.Chat.User
+		}
+	}
 
 	var eventType string
-	var typeMessage string
 
 	if evt.Type == types.ReceiptTypeDelivered {
-		payload["receipt_type"] = "delivered"
-		eventType = "message.sent"
-		typeMessage = "message_sent"
+		eventType = "message_sent"
+		payload["typeEvent"] = "delivered"
+		payload["typeMessage"] = "message_sent"
 	} else if evt.Type == types.ReceiptTypeRead {
-		payload["receipt_type"] = "read"
-		eventType = "message.read"
-		typeMessage = "message_read"
+		eventType = "message_read"
+		payload["typeEvent"] = "read"
+		// typeMessage is removed as per user request for read receipts
 	} else {
-		payload["receipt_type"] = evt.Type
 		eventType = "message.ack" // Default event type
-		typeMessage = "message_ack"
+		payload["typeEvent"] = evt.Type
 	}
-	payload["receipt_type_description"] = getReceiptTypeDescription(evt.Type)
-	payload["type_message"] = typeMessage // Add type_message to payload
+	payload["descriptionEvent"] = getReceiptTypeDescription(evt.Type)
 
-	// Wrap in payload structure
-	body["payload"] = payload
+	outerBody["payload"] = payload
+	outerBody["event"] = eventType
 
-	// Add metadata for webhook processing
-	body["event"] = eventType // Use dynamic eventType
-	body["timestamp"] = evt.Timestamp.Format(time.RFC3339)
+	loc, err := time.LoadLocation("America/Sao_Paulo")
+	if err == nil {
+		outerBody["timestamp"] = evt.Timestamp.In(loc).Format("02/01/2006 15:04")
+	} else {
+		outerBody["timestamp"] = evt.Timestamp.Format("02/01/2006 15:04")
+	}
 
-	return body
+	return outerBody
 }
 
 // forwardReceiptToWebhook forwards message acknowledgement events to the configured webhook URLs
 func forwardReceiptToWebhook(ctx context.Context, evt *events.Receipt) error {
-	payload := createReceiptPayload(evt)
+	payload := createReceiptPayload(ctx, evt)
 	return forwardPayloadToConfiguredWebhooks(ctx, payload, "message ack event")
 }

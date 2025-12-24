@@ -3,6 +3,7 @@ package usecase
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -910,6 +911,8 @@ func (service serviceSend) SendPoll(ctx context.Context, request domainSend.Poll
 		return response, err
 	}
 
+	messageSecret := hex.EncodeToString(msg.GetMessageContextInfo().GetMessageSecret())
+
 	// Manually trigger webhook for sent poll
 	go func() {
 		// We need to build a fake event to satisfy the createMessagePayload function
@@ -920,28 +923,29 @@ func (service serviceSend) SendPoll(ctx context.Context, request domainSend.Poll
 
 		// Create the payload for the poll
 		pollPayload := map[string]any{
-			"Title":                  request.Question,
-			"Options":                request.Options,
+			"Title": request.Question,
+			"Options": request.Options,
 			"selectable_options_count": request.MaxAnswer,
 		}
 
 		// Create the main payload
 		payload := map[string]any{
-			"event":     "message_sent",
+			"event": "message_sent",
 			"timestamp": ts.Timestamp.Format("02/01/2006 15:04"),
 			"payload": map[string]any{
-				"timeStamp":      ts.Timestamp.Format("02/01/2006 15:04"),
-				"Port":           config.AppPort,
-				"isGroup":        utils.IsGroupJID(dataWaRecipient.String()),
-				"mySelf":         true,
-				"senderNumber":   client.Store.ID.User,
+				"timeStamp": ts.Timestamp.Format("02/01/2006 15:04"),
+				"Port": config.AppPort,
+				"isGroup": utils.IsGroupJID(dataWaRecipient.String()),
+				"mySelf": true,
+				"senderNumber": client.Store.ID.User,
 				"senderPushname": client.Store.PushName,
 				"receiverNumber": dataWaRecipient.User,
 				"message": map[string]string{
 					"id": ts.ID,
 				},
 				"typeMessage": "poll_message",
-				"Poll":        pollPayload,
+				"Poll": pollPayload,
+				"message_secret": messageSecret, // Add message_secret here
 			},
 		}
 

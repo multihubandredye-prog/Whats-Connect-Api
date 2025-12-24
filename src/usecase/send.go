@@ -18,31 +18,35 @@ import (
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/domains/app"
 	domainChatStorage "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/chatstorage"
 	domainSend "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/send"
+	domainWhatsapp "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/whatsapp"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
 	pkgError "github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/error"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/rest/helpers"
+_ "github.com/aldinokemal/go-whatsapp-web-multidevice/ui/websocket"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/validations"
 	"github.com/disintegration/imaging"
 	fiberUtils "github.com/gofiber/fiber/v2/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 	"go.mau.fi/whatsmeow"
-	wtypes "go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
+	wtypes "go.mau.fi/whatsmeow/types"
 	"google.golang.org/protobuf/proto"
 )
 
 type serviceSend struct {
 	appService      app.IAppUsecase
 	chatStorageRepo domainChatStorage.IChatStorageRepository
+	webhookUsecase  domainWhatsapp.IWebhookUsecase
 }
 
-func NewSendService(appService app.IAppUsecase, chatStorageRepo domainChatStorage.IChatStorageRepository) domainSend.ISendUsecase {
+func NewSendService(appService app.IAppUsecase, chatStorageRepo domainChatStorage.IChatStorageRepository, webhookUsecase domainWhatsapp.IWebhookUsecase) domainSend.ISendUsecase {
 	return &serviceSend{
 		appService:      appService,
 		chatStorageRepo: chatStorageRepo,
+		webhookUsecase:  webhookUsecase,
 	}
 }
 
@@ -905,6 +909,48 @@ func (service serviceSend) SendPoll(ctx context.Context, request domainSend.Poll
 	if err != nil {
 		return response, err
 	}
+
+	// Manually trigger webhook for sent poll
+	go func() {
+		// We need to build a fake event to satisfy the createMessagePayload function
+		client := whatsapp.GetClient()
+		if client == nil {
+			return
+		}
+
+		// Create the payload for the poll
+		pollPayload := map[string]any{
+			"Title":                  request.Question,
+			"Options":                request.Options,
+			"selectable_options_count": request.MaxAnswer,
+		}
+
+		// Create the main payload
+		payload := map[string]any{
+			"event":     "message_sent",
+			"timestamp": ts.Timestamp.Format("02/01/2006 15:04"),
+			"payload": map[string]any{
+				"timeStamp":      ts.Timestamp.Format("02/01/2006 15:04"),
+				"Port":           config.AppPort,
+				"isGroup":        utils.IsGroupJID(dataWaRecipient.String()),
+				"mySelf":         true,
+				"senderNumber":   client.Store.ID.User,
+				"senderPushname": client.Store.PushName,
+				"receiverNumber": dataWaRecipient.User,
+				"message": map[string]string{
+					"id": ts.ID,
+				},
+				"typeMessage": "poll_message",
+				"Poll":        pollPayload,
+			},
+		}
+
+		// Forward to webhook
+		err := service.webhookUsecase.Forward(context.Background(), "message_sent", payload)
+		if err != nil {
+			logrus.Errorf("Failed to forward poll message to webhook: %v", err)
+		}
+	}()
 
 	response.MessageID = ts.ID
 	response.Status = fmt.Sprintf("Send poll success %s (server timestamp: %s)", request.BaseRequest.Phone, ts.Timestamp.String())

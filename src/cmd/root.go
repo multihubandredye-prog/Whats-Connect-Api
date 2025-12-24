@@ -19,6 +19,7 @@ import (
 	domainNewsletter "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/newsletter"
 	domainSend "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/send"
 	domainUser "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/user"
+	domainWhatsapp "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/whatsapp"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/chatstorage"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
@@ -50,6 +51,7 @@ var (
 	messageUsecase    domainMessage.IMessageUsecase
 	groupUsecase      domainGroup.IGroupUsecase
 	newsletterUsecase domainNewsletter.INewsletterUsecase
+	webhookUsecase    domainWhatsapp.IWebhookUsecase
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -304,7 +306,8 @@ func initApp() {
 	// Usecase
 	appUsecase = usecase.NewAppService(chatStorageRepo)
 	chatUsecase = usecase.NewChatService(chatStorageRepo)
-	sendUsecase = usecase.NewSendService(appUsecase, chatStorageRepo)
+	webhookUsecase = whatsapp.NewWebhookUsecase()
+	sendUsecase = usecase.NewSendService(appUsecase, chatStorageRepo, webhookUsecase)
 	userUsecase = usecase.NewUserService()
 	messageUsecase = usecase.NewMessageService(chatStorageRepo)
 	groupUsecase = usecase.NewGroupService()

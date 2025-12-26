@@ -2,9 +2,12 @@ package whatsapp
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json" // Adicionado
+	"encoding/json"
 	"mime"
 	"path/filepath"
 	"regexp"
@@ -145,7 +148,6 @@ func createMessagePayload(ctx context.Context, webhookUsecase domainWhatsapp.IWe
 
 	if message.ID != "" {
 		if message.Message != "" {
-			// Prioritize link detection before emoji or text message
 			if isLikelyLinkMessage(message.Message) {
 				typeMessage = "link_message"
 				if extendedText := evt.Message.GetExtendedTextMessage(); extendedText != nil {
@@ -275,15 +277,96 @@ func createMessagePayload(ctx context.Context, webhookUsecase domainWhatsapp.IWe
 		}
 	} else if pollUpdateMessage := evt.Message.GetPollUpdateMessage(); pollUpdateMessage != nil {
 		typeMessage = "poll_response_message"
-		decryptedVote, errDecrypt := client.DecryptPollVote(ctx, evt)
-		if errDecrypt != nil {
-			logrus.Errorf("Failed to decrypt poll vote: %v", errDecrypt)
-		}
+		
+		var (
+			decryptedVoteFromLib *waE2E.PollVoteMessage
+			errDecryptFromLib    error
+			selectedOptions      []string
+		)
 
-		var selectedOptions []string
-		if decryptedVote != nil {
-			for _, option := range decryptedVote.GetSelectedOptions() {
+		// --- Tentar descriptografia pela biblioteca whatsmeow (abordagem padrão) ---
+		decryptedVoteFromLib, errDecryptFromLib = client.DecryptPollVote(ctx, evt)
+		if errDecryptFromLib != nil {
+			logrus.Errorf("Attempting whatsmeow library decrypt: Failed to decrypt poll vote: %v", errDecryptFromLib)
+		} else if decryptedVoteFromLib != nil {
+			for _, option := range decryptedVoteFromLib.GetSelectedOptions() {
 				selectedOptions = append(selectedOptions, hex.EncodeToString(option))
+			}
+			logrus.Debugf("whatsmeow library decrypt successful.")
+		}
+		
+		// --- Fallback para descriptografia manual se a biblioteca falhar ---
+		if len(selectedOptions) == 0 { // Se a descriptografia da biblioteca não funcionou
+			originalPollMessageID := pollUpdateMessage.GetPollCreationMessageKey().GetID()
+			storedPollMessage, err := webhookUsecase.GetChatStorageRepo().GetMessageByID(originalPollMessageID)
+			
+			if err != nil {
+				logrus.Errorf("createMessagePayload: Error retrieving original poll message with ID %s from storage for manual decrypt fallback: %v", originalPollMessageID, err)
+			} else if storedPollMessage == nil || storedPollMessage.PollMessageSecret == "" {
+				if storedPollMessage == nil {
+					logrus.Warnf("Original poll message with ID %s not found in storage for manual decrypt fallback.", originalPollMessageID)
+				} else {
+					logrus.Warnf("Original poll message with ID %s found, but secret is missing for manual decrypt fallback.", originalPollMessageID)
+				}
+			} else {
+				secretBytes, err := hex.DecodeString(storedPollMessage.PollMessageSecret)
+				if err != nil {
+					logrus.Errorf("Failed to decode poll message secret from storage for manual decrypt fallback: %v", err)
+				} else {
+					encKey := hkdfSHA256(secretBytes, []byte("WhatsApp Poll Encryption"), 32)
+					iv := pollUpdateMessage.GetVote().GetEncIV()
+					ciphertext := pollUpdateMessage.GetVote().GetEncPayload()
+
+					if len(encKey) == 32 && len(iv) > 0 && len(ciphertext) > 0 {
+						block, err := aes.NewCipher(encKey)
+						if err != nil {
+							logrus.Errorf("Failed to create AES cipher for manual poll decryption: %v", err)
+						} else {
+							gcm, err := cipher.NewGCM(block)
+							if err != nil {
+								logrus.Errorf("Failed to create GCM for manual poll decryption: %v", err)
+							} else {
+								aadCandidates := [][]byte{
+									[]byte(originalPollMessageID),                  // AAD = Original message ID
+									[]byte(evt.Info.Sender.String()),              // AAD = Sender JID
+									[]byte(evt.Info.ID),                           // AAD = Vote message ID
+									[]byte(originalPollMessageID + evt.Info.Sender.String()), // AAD = Combined
+									nil,                                           // AAD = Empty
+								}
+								
+								var decrypted []byte
+								var decryptErr error
+								
+								for i, aad := range aadCandidates {
+									decrypted, decryptErr = gcm.Open(nil, iv, ciphertext, aad)
+									if decryptErr == nil {
+										logrus.Debugf("Manual decrypt fallback successful with AAD candidate #%d", i)
+										break // Sucesso, sai do loop de AAD
+									}
+									logrus.Debugf("Manual decrypt fallback failed with AAD candidate #%d: %v", i, decryptErr)
+								}
+
+								if decryptErr == nil {
+									for i := 0; i < len(decrypted); i += 32 {
+										end := i + 32
+										if end > len(decrypted) {
+											break
+										}
+										hash := decrypted[i:end]
+										if len(hash) == 32 {
+											selectedOptions = append(selectedOptions, hex.EncodeToString(hash))
+										}
+									}
+									logrus.Infof("Manual decrypt fallback successful for message %s. Found %d options.", originalPollMessageID, len(selectedOptions))
+								} else {
+									logrus.Errorf("All manual decrypt fallback attempts failed for message %s: %v", originalPollMessageID, decryptErr)
+								}
+							}
+						}
+					} else {
+						logrus.Errorf("Manual decrypt fallback aborted: Invalid key/IV/ciphertext length. Key: %d, IV: %d, Ciphertext: %d", len(encKey), len(iv), len(ciphertext))
+					}
+				}
 			}
 		}
 
@@ -297,63 +380,58 @@ func createMessagePayload(ctx context.Context, webhookUsecase domainWhatsapp.IWe
 		}
 
 		originalPollMessageID := pollUpdateMessage.GetPollCreationMessageKey().GetID()
-		logrus.Debugf("createMessagePayload: Processing poll response for originalPollMessageID: %s", originalPollMessageID)
-
-		// Buscar informações da enquete original do chatStorageRepo
 		storedPollMessage, err := webhookUsecase.GetChatStorageRepo().GetMessageByID(originalPollMessageID)
-		if err != nil {
-			logrus.Errorf("createMessagePayload: Error retrieving original poll message with ID %s from storage: %v", originalPollMessageID, err)
-		}
-		logrus.Debugf("createMessagePayload: Stored poll message retrieved: %+v", storedPollMessage)
-		if storedPollMessage != nil {
-			logrus.Debugf("createMessagePayload: StoredPollMessage ID: %s, MediaType: %s, PollOptions: %s, PollMessageSecret: %s, PollTitle: %s",
-				storedPollMessage.ID, storedPollMessage.MediaType, storedPollMessage.PollOptions,
-				storedPollMessage.PollMessageSecret, storedPollMessage.PollTitle)
-		}
-
-		if storedPollMessage != nil && storedPollMessage.MediaType == "poll" { // Verificar se é de fato uma mensagem de enquete
-			logrus.Debugf("createMessagePayload: storedPollMessage is valid and is a poll.")
+		
+		if storedPollMessage != nil && storedPollMessage.MediaType == "poll" {
 			var storedOptions []string
 			if storedPollMessage.PollOptions != "" {
-				logrus.Debugf("createMessagePayload: StoredPollMessage.PollOptions is not empty: %s", storedPollMessage.PollOptions)
 				err = json.Unmarshal([]byte(storedPollMessage.PollOptions), &storedOptions)
 				if err != nil {
 					logrus.Errorf("createMessagePayload: Failed to unmarshal stored poll options for message ID %s: %v", originalPollMessageID, err)
-					storedOptions = []string{} // Fallback para vazio
-				} else {
-					logrus.Debugf("createMessagePayload: Unmarshalled stored options: %+v", storedOptions)
+					storedOptions = []string{}
 				}
-			} else {
-				logrus.Warnf("createMessagePayload: StoredPollMessage.PollOptions is empty for message ID %s", originalPollMessageID)
 			}
 
-			if decryptedVote != nil && len(selectedOptions) > 0 {
-				logrus.Debugf("createMessagePayload: Decrypted vote is present and selectedOptions has length: %d", len(selectedOptions))
-				logrus.Debugf("createMessagePayload: selectedOptions[0]: %s", selectedOptions[0])
-				for _, optionText := range storedOptions {
-					optionHash := hashSHA256(optionText)
-					logrus.Debugf("createMessagePayload: Comparing stored option '%s' (hash: %s) with selected option hash '%s'", optionText, optionHash, selectedOptions[0])
-					if optionHash == selectedOptions[0] {
-						voteInfo := pollResponsePayload["vote_info"].(map[string]any)
-						voteInfo["pollSelectedResponse"] = optionText
-						logrus.Debugf("createMessagePayload: Matched selected option: %s", optionText)
-						break
+			if len(selectedOptions) > 0 {
+				var matchedOptions []string
+				for _, selOptHash := range selectedOptions {
+					for _, optionText := range storedOptions {
+						optionHash := hashSHA256(optionText)
+						if optionHash == selOptHash {
+							matchedOptions = append(matchedOptions, optionText)
+							break
+						}
 					}
 				}
+				if len(matchedOptions) > 0 {
+					voteInfo := pollResponsePayload["vote_info"].(map[string]any)
+					if len(matchedOptions) == 1 {
+						voteInfo["pollSelectedResponse"] = matchedOptions[0]
+					} else {
+						voteInfo["pollSelectedResponse"] = matchedOptions
+					}
+					logrus.Infof("Successfully matched poll vote for message %s. Response: %s", originalPollMessageID, strings.Join(matchedOptions, ", "))
+				} else {
+					logrus.Warnf("Decrypted poll vote for message %s, but no matching option found among stored options.", originalPollMessageID)
+				}
 			} else {
-				logrus.Warnf("createMessagePayload: Decrypted vote is nil or selectedOptions is empty. decryptedVote: %+v, selectedOptions: %+v", decryptedVote, selectedOptions)
+				logrus.Warnf("No selected options were decrypted for message %s.", originalPollMessageID)
 			}
+
 			if storedPollMessage.PollMessageSecret != "" {
-				pollResponsePayload["original_poll_message_secret"] = storedPollMessage.PollMessageSecret
-			} else {
-				logrus.Warnf("createMessagePayload: storedPollMessage.PollMessageSecret is empty for message ID %s", originalPollMessageID)
+				pollResponsePayload["message_secret"] = storedPollMessage.PollMessageSecret
 			}
+
 			pollResponsePayload["poll_metadata"] = map[string]any{
 				"title":   storedPollMessage.PollTitle,
 				"Options": storedOptions,
 			}
 		} else {
-			logrus.Warnf("createMessagePayload: Original poll message with ID %s not found or not a poll in storage. storedPollMessage: %+v", originalPollMessageID, storedPollMessage)
+			if storedPollMessage == nil {
+				logrus.Warnf("Original poll message with ID %s not found in storage during final payload construction.", originalPollMessageID)
+			} else {
+				logrus.Warnf("Original poll message with ID %s found, but not a poll during final payload construction.", originalPollMessageID)
+			}
 		}
 		payload["pollResponse"] = pollResponsePayload
 	} else if pollMessage := evt.Message.GetPollCreationMessageV3(); pollMessage != nil {
@@ -367,7 +445,7 @@ func createMessagePayload(ctx context.Context, webhookUsecase domainWhatsapp.IWe
 			"Options":                options,
 			"selectable_options_count": pollMessage.GetSelectableOptionsCount(),
 		}
-	} else if liveLocationMessage := evt.Message.GetLiveLocationMessage(); liveLocationMessage != nil { // LIVE LOCATION
+	} else if liveLocationMessage := evt.Message.GetLiveLocationMessage(); liveLocationMessage != nil {
 		typeMessage = "live_location_message"
 		payload["liveLocation"] = map[string]any{
 			"degreesLatitude":  liveLocationMessage.GetDegreesLatitude(),
@@ -401,4 +479,24 @@ func createMessagePayload(ctx context.Context, webhookUsecase domainWhatsapp.IWe
 
 	outerBody["payload"] = payload
 	return outerBody, nil
+}
+
+func hkdfSHA256(secret, info []byte, length int) []byte {
+	mac := hmac.New(sha256.New, nil)
+	mac.Write(secret)
+	prk := mac.Sum(nil)
+
+	mac = hmac.New(sha256.New, prk)
+	var okm []byte
+	var t []byte
+	for i := 0; len(okm) < length; i++ {
+		mac.Reset()
+		mac.Write(t)
+		mac.Write(info)
+		mac.Write([]byte{byte(i + 1)})
+		t = mac.Sum(nil)
+		okm = append(okm, t...)
+	}
+
+	return okm[:length]
 }

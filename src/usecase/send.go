@@ -3,8 +3,8 @@ package usecase
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,7 +25,7 @@ import (
 	pkgError "github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/error"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/rest/helpers"
-_ "github.com/aldinokemal/go-whatsapp-web-multidevice/ui/websocket"
+	_ "github.com/aldinokemal/go-whatsapp-web-multidevice/ui/websocket"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/validations"
 	"github.com/disintegration/imaging"
 	fiberUtils "github.com/gofiber/fiber/v2/utils"
@@ -66,23 +66,45 @@ func (service serviceSend) wrapSendMessage(ctx context.Context, recipient types.
 	}
 
 	// Store message asynchronously with timeout
-	// Use a goroutine to avoid blocking the send operation
 	go func() {
-		storeCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		storeCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		// Skip storing generic message if it's a poll creation message
-		// because SendPoll already stores the detailed poll message.
-		if msg.GetPollCreationMessage() != nil || msg.GetPollCreationMessageV2() != nil || msg.GetPollCreationMessageV3() != nil {
-			logrus.Debugf("wrapSendMessage: Skipping generic storage for poll creation message ID: %s", ts.ID)
-			return
-		}
+		if poll := msg.GetPollCreationMessage(); poll != nil {
+			// This is a poll, use detailed storage
+			messageSecret := hex.EncodeToString(msg.GetMessageContextInfo().GetMessageSecret())
+			var options []string
+			for _, opt := range poll.GetOptions() {
+				options = append(options, opt.GetOptionName())
+			}
+			pollOptionsJSON, _ := json.Marshal(options)
 
-		if err := service.chatStorageRepo.StoreSentMessageWithContext(storeCtx, ts.ID, senderJID, recipient.String(), content, ts.Timestamp); err != nil {
-			if errors.Is(err, context.DeadlineExceeded) {
-				logrus.Warn("Timeout storing sent message")
+			pollMessage := &domainChatStorage.Message{
+				ID:                         ts.ID,
+				ChatJID:                    recipient.String(),
+				Sender:                     senderJID,
+				Content:                    content,
+				Timestamp:                  ts.Timestamp,
+				IsFromMe:                   true,
+				MediaType:                  "poll",
+				PollMessageSecret:          messageSecret,
+				PollTitle:                  *poll.Name,
+				PollOptions:                string(pollOptionsJSON),
+				PollSelectableOptionsCount: int(poll.GetSelectableOptionsCount()),
+			}
+			if err := service.chatStorageRepo.StoreMessage(pollMessage); err != nil {
+				logrus.Errorf("Failed to store detailed poll message in chat storage: %v", err)
 			} else {
-				logrus.Warnf("Failed to store sent message: %v", err)
+				logrus.Debugf("Successfully stored detailed poll message ID: %s", ts.ID)
+			}
+		} else {
+			// Not a poll, use generic storage
+			if err := service.chatStorageRepo.StoreSentMessageWithContext(storeCtx, ts.ID, senderJID, recipient.String(), content, ts.Timestamp); err != nil {
+				if errors.Is(err, context.DeadlineExceeded) {
+					logrus.Warn("Timeout storing sent message")
+				} else {
+					logrus.Warnf("Failed to store sent message: %v", err)
+				}
 			}
 		}
 	}()
@@ -919,68 +941,37 @@ func (service serviceSend) SendPoll(ctx context.Context, request domainSend.Poll
 		return response, err
 	}
 
-	messageSecret := hex.EncodeToString(msg.GetMessageContextInfo().GetMessageSecret())
-
-	// Convert poll options to JSON string for storage
-	pollOptionsJSON, err := json.Marshal(request.Options)
-	if err != nil {
-		logrus.Errorf("Failed to marshal poll options to JSON: %v", err)
-		// Continue without storing poll options if marshaling fails, but log the error
-		pollOptionsJSON = []byte("[]")
-	}
-
-	// Store the poll message details explicitly
-	pollMessage := &domainChatStorage.Message{
-		ID:                         ts.ID,
-		ChatJID:                    dataWaRecipient.String(),
-		Sender:                     whatsapp.GetClient().Store.ID.String(),
-		Content:                    content, // The "📊 Question" text
-		Timestamp:                  ts.Timestamp,
-		IsFromMe:                   true,
-		MediaType:                  "poll", // Indicate this is a poll message
-		PollMessageSecret:          messageSecret,
-		PollTitle:                  request.Question,
-		PollOptions:                string(pollOptionsJSON),
-		PollSelectableOptionsCount: request.MaxAnswer,
-	}
-
-	if err := service.chatStorageRepo.StoreMessage(pollMessage); err != nil {
-		logrus.Errorf("Failed to store poll message in chat storage: %v", err)
-		// Do not return error here, as the message was already sent to WhatsApp
-	}
-
 	// Manually trigger webhook for sent poll
 	go func() {
-		// We need to build a fake event to satisfy the createMessagePayload function
 		client := whatsapp.GetClient()
 		if client == nil {
 			return
 		}
-
+		messageSecret := hex.EncodeToString(msg.GetMessageContextInfo().GetMessageSecret())
 		// Create the payload for the poll
 		pollPayload := map[string]any{
-			"Title": request.Question,
-			"Options": request.Options,
+			"Title":                  request.Question,
+			"Options":                request.Options,
 			"selectable_options_count": request.MaxAnswer,
 		}
 
 		// Create the main payload
 		payload := map[string]any{
-			"event": "message_sent",
+			"event":     "message_sent",
 			"timestamp": ts.Timestamp.Format("02/01/2006 15:04"),
 			"payload": map[string]any{
-				"timeStamp": ts.Timestamp.Format("02/01/2006 15:04"),
-				"Port": config.AppPort,
-				"isGroup": utils.IsGroupJID(dataWaRecipient.String()),
-				"mySelf": true,
-				"senderNumber": client.Store.ID.User,
+				"timeStamp":      ts.Timestamp.Format("02/01/2006 15:04"),
+				"Port":           config.AppPort,
+				"isGroup":        utils.IsGroupJID(dataWaRecipient.String()),
+				"mySelf":         true,
+				"senderNumber":   client.Store.ID.User,
 				"senderPushname": client.Store.PushName,
 				"receiverNumber": dataWaRecipient.User,
 				"message": map[string]string{
 					"id": ts.ID,
 				},
-				"typeMessage": "poll_message",
-				"Poll": pollPayload,
+				"typeMessage":    "poll_message",
+				"Poll":           pollPayload,
 				"message_secret": messageSecret, // Add message_secret here
 			},
 		}

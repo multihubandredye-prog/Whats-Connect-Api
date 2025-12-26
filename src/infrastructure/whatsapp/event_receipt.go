@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	domainWhatsapp "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/whatsapp"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 )
@@ -32,8 +33,14 @@ func getReceiptTypeDescription(evt types.ReceiptType) string {
 	}
 }
 
+// forwardReceiptToWebhook forwards message acknowledgement events to the configured webhook URLs
+func forwardReceiptToWebhook(ctx context.Context, evt *events.Receipt, webhookUsecase domainWhatsapp.IWebhookUsecase) error {
+	payload := createReceiptPayload(ctx, evt, webhookUsecase)
+	return webhookUsecase.Forward(ctx, "message ack event", payload)
+}
+
 // createReceiptPayload creates a webhook payload for message acknowledgement (receipt) events
-func createReceiptPayload(ctx context.Context, evt *events.Receipt) map[string]any {
+func createReceiptPayload(ctx context.Context, evt *events.Receipt, webhookUsecase domainWhatsapp.IWebhookUsecase) map[string]any {
 	outerBody := make(map[string]any)
 	payload := make(map[string]any)
 
@@ -83,10 +90,4 @@ func createReceiptPayload(ctx context.Context, evt *events.Receipt) map[string]a
 	}
 
 	return outerBody
-}
-
-// forwardReceiptToWebhook forwards message acknowledgement events to the configured webhook URLs
-func forwardReceiptToWebhook(ctx context.Context, evt *events.Receipt) error {
-	payload := createReceiptPayload(ctx, evt)
-	return forwardPayloadToConfiguredWebhooks(ctx, payload, "message ack event")
 }

@@ -2,11 +2,9 @@ package whatsapp
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
-	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
+	domainWhatsapp "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/whatsapp"
 	"github.com/sirupsen/logrus"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
@@ -50,8 +48,8 @@ func jidsToStrings(jids []types.JID) []string {
 }
 
 // forwardGroupInfoToWebhook forwards group information events to the configured webhook URLs
-func forwardGroupInfoToWebhook(ctx context.Context, evt *events.GroupInfo) error {
-	logrus.Infof("Forwarding group info event to %d configured webhook(s)", len(config.WhatsappWebhook))
+func forwardGroupInfoToWebhook(ctx context.Context, evt *events.GroupInfo, webhookUsecase domainWhatsapp.IWebhookUsecase) error {
+	logrus.Infof("Forwarding group info event to webhook(s)")
 
 	// Send separate webhook events for each action type
 	actions := []struct {
@@ -68,29 +66,13 @@ func forwardGroupInfoToWebhook(ctx context.Context, evt *events.GroupInfo) error
 		if len(action.jids) > 0 {
 			payload := createGroupInfoPayload(evt, action.actionType, action.jids)
 
-			// Collect errors from all webhook URLs instead of failing fast
-			var errors []error
-			for _, url := range config.WhatsappWebhook {
-				if err := submitWebhook(ctx, payload, url); err != nil {
-					errors = append(errors, fmt.Errorf("webhook %s failed: %w", url, err))
-				}
+			// Call webhookUsecase.Forward instead of direct submitWebhook loop
+			if err := webhookUsecase.Forward(ctx, "group.participants", payload); err != nil {
+				logrus.Errorf("Failed to forward group %s event to webhook: %v", action.actionType, err)
+				// Continue to process other actions even if one fails
+			} else {
+				logrus.Infof("Group %s event forwarded to webhook: %d users %s", action.actionType, len(action.jids), action.actionType)
 			}
-
-			// If all webhooks failed, return combined error
-			if len(errors) == len(config.WhatsappWebhook) && len(errors) > 0 {
-				var errMessages []string
-				for _, err := range errors {
-					errMessages = append(errMessages, err.Error())
-				}
-				return fmt.Errorf("all webhook URLs failed: %s", strings.Join(errMessages, "; "))
-			}
-
-			// Log partial failures
-			if len(errors) > 0 {
-				logrus.Warnf("Some webhook URLs failed for group %s event: %v", action.actionType, errors)
-			}
-
-			logrus.Infof("Group %s event forwarded to webhook: %d users %s", action.actionType, len(action.jids), action.actionType)
 		}
 	}
 

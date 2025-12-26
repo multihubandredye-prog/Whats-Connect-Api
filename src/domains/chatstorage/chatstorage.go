@@ -25,10 +25,14 @@ type Message struct {
 	URL           string    `db:"url"`
 	MediaKey      []byte    `db:"media_key"`
 	FileSHA256    []byte    `db:"file_sha256"`
-	FileEncSHA256 []byte    `db:"file_enc_sha256"`
-	FileLength    uint64    `db:"file_length"`
-	CreatedAt     time.Time `db:"created_at"`
-	UpdatedAt     time.Time `db:"updated_at"`
+	FileEncSHA256              []byte    `db:"file_enc_sha256"`
+	FileLength                uint64    `db:"file_length"`
+	PollMessageSecret         string    `db:"poll_message_secret"` // New field
+	PollTitle                 string    `db:"poll_title"`          // New field
+	PollOptions               string    `db:"poll_options"`        // New field (JSON string)
+	PollSelectableOptionsCount int       `db:"poll_selectable_options_count"` // New field
+	CreatedAt                 time.Time `db:"created_at"`
+	UpdatedAt                 time.Time `db:"updated_at"`
 }
 
 // MediaInfo represents downloadable media information

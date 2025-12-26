@@ -66,7 +66,9 @@ func (r *SQLiteRepository) GetMessageByID(id string) (*domainChatStorage.Message
 	query := `
 		SELECT id, chat_jid, sender, content, timestamp, is_from_me,
 			media_type, filename, url, media_key, file_sha256,
-			file_enc_sha256, file_length, created_at, updated_at
+			file_enc_sha256, file_length, 
+			poll_message_secret, poll_title, poll_options, poll_selectable_options_count, 
+			created_at, updated_at
 		FROM messages
 		WHERE id = ?
 		LIMIT 1
@@ -178,8 +180,10 @@ func (r *SQLiteRepository) StoreMessage(message *domainChatStorage.Message) erro
 		INSERT INTO messages (
 			id, chat_jid, sender, content, timestamp, is_from_me, 
 			media_type, filename, url, media_key, file_sha256, 
-			file_enc_sha256, file_length, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			file_enc_sha256, file_length, 
+			poll_message_secret, poll_title, poll_options, poll_selectable_options_count, 
+			created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id, chat_jid) DO UPDATE SET
 			sender = excluded.sender,
 			content = excluded.content,
@@ -192,6 +196,10 @@ func (r *SQLiteRepository) StoreMessage(message *domainChatStorage.Message) erro
 			file_sha256 = excluded.file_sha256,
 			file_enc_sha256 = excluded.file_enc_sha256,
 			file_length = excluded.file_length,
+			poll_message_secret = excluded.poll_message_secret, 
+			poll_title = excluded.poll_title,                   
+			poll_options = excluded.poll_options,               
+			poll_selectable_options_count = excluded.poll_selectable_options_count, 
 			updated_at = excluded.updated_at
 	`
 
@@ -199,7 +207,9 @@ func (r *SQLiteRepository) StoreMessage(message *domainChatStorage.Message) erro
 		message.ID, message.ChatJID, message.Sender, message.Content,
 		message.Timestamp, message.IsFromMe, message.MediaType, message.Filename,
 		message.URL, message.MediaKey, message.FileSHA256, message.FileEncSHA256,
-		message.FileLength, message.CreatedAt, message.UpdatedAt,
+		message.FileLength,
+		message.PollMessageSecret, message.PollTitle, message.PollOptions, message.PollSelectableOptionsCount,
+		message.CreatedAt, message.UpdatedAt,
 	)
 
 	return err
@@ -222,8 +232,10 @@ func (r *SQLiteRepository) StoreMessagesBatch(messages []*domainChatStorage.Mess
 		INSERT INTO messages (
 			id, chat_jid, sender, content, timestamp, is_from_me, 
 			media_type, filename, url, media_key, file_sha256, 
-			file_enc_sha256, file_length, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			file_enc_sha256, file_length, 
+			poll_message_secret, poll_title, poll_options, poll_selectable_options_count, 
+			created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id, chat_jid) DO UPDATE SET
 			sender = excluded.sender,
 			content = excluded.content,
@@ -236,6 +248,10 @@ func (r *SQLiteRepository) StoreMessagesBatch(messages []*domainChatStorage.Mess
 			file_sha256 = excluded.file_sha256,
 			file_enc_sha256 = excluded.file_enc_sha256,
 			file_length = excluded.file_length,
+			poll_message_secret = excluded.poll_message_secret, 
+			poll_title = excluded.poll_title,                   
+			poll_options = excluded.poll_options,               
+			poll_selectable_options_count = excluded.poll_selectable_options_count, 
 			updated_at = excluded.updated_at
 	`)
 	if err != nil {
@@ -257,7 +273,9 @@ func (r *SQLiteRepository) StoreMessagesBatch(messages []*domainChatStorage.Mess
 			message.ID, message.ChatJID, message.Sender, message.Content,
 			message.Timestamp, message.IsFromMe, message.MediaType, message.Filename,
 			message.URL, message.MediaKey, message.FileSHA256, message.FileEncSHA256,
-			message.FileLength, message.CreatedAt, message.UpdatedAt,
+			message.FileLength,
+			message.PollMessageSecret, message.PollTitle, message.PollOptions, message.PollSelectableOptionsCount, 
+			message.CreatedAt, message.UpdatedAt,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to store message %s: %w", message.ID, err)
@@ -415,7 +433,9 @@ func (r *SQLiteRepository) scanMessage(scanner interface{ Scan(...any) error }) 
 		&message.ID, &message.ChatJID, &message.Sender, &message.Content,
 		&message.Timestamp, &message.IsFromMe, &message.MediaType, &message.Filename,
 		&message.URL, &message.MediaKey, &message.FileSHA256, &message.FileEncSHA256,
-		&message.FileLength, &message.CreatedAt, &message.UpdatedAt,
+		&message.FileLength,
+		&message.PollMessageSecret, &message.PollTitle, &message.PollOptions, &message.PollSelectableOptionsCount,
+		&message.CreatedAt, &message.UpdatedAt,
 	)
 	return message, err
 }
@@ -821,6 +841,13 @@ func (r *SQLiteRepository) getMigrations() []string {
 		// Migration 2: Add index for message ID lookups (performance optimization)
 		`
 		CREATE INDEX IF NOT EXISTS idx_messages_id ON messages(id);
+		`,
+		// Migration 3: Add poll-related columns to messages table
+		`
+		ALTER TABLE messages ADD COLUMN poll_message_secret TEXT DEFAULT '';
+		ALTER TABLE messages ADD COLUMN poll_title TEXT DEFAULT '';
+		ALTER TABLE messages ADD COLUMN poll_options TEXT DEFAULT '';
+		ALTER TABLE messages ADD COLUMN poll_selectable_options_count INTEGER DEFAULT 0;
 		`,
 	}
 }

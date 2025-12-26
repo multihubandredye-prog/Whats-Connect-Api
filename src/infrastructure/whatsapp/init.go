@@ -15,6 +15,7 @@ import (
 
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
 	domainChatStorage "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/chatstorage"
+	domainWhatsapp "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/whatsapp"
 	pkgError "github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/error"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/websocket"
@@ -174,8 +175,11 @@ func InitWaCLI(ctx context.Context, storeContainer, keysStoreContainer *sqlstore
 	client.EnableAutoReconnect = true
 	client.AutoTrustIdentity = true
 
+	// Create WebhookUsecase instance
+	webhookUsecase := NewWebhookUsecase(chatStorageRepo)
+
 	client.AddEventHandler(func(rawEvt interface{}) {
-		handler(ctx, rawEvt, chatStorageRepo)
+		handler(ctx, rawEvt, chatStorageRepo, webhookUsecase)
 	})
 
 	globalStateMu.Lock()
@@ -417,7 +421,7 @@ func ReinitializeWhatsAppComponents(ctx context.Context, chatStorageRepo domainC
 }
 
 // PerformCompleteCleanup performs all cleanup operations in the correct order
-func PerformCompleteCleanup(ctx context.Context, logPrefix string, chatStorageRepo domainChatStorage.IChatStorageRepository) (*sqlstore.Container, *whatsmeow.Client, error) {
+func PerformCompleteCleanup(ctx context.Context, logPrefix string, chatStorageRepo domainChatStorage.IChatStorageRepository, webhookUsecase domainWhatsapp.IWebhookUsecase) (*sqlstore.Container, *whatsmeow.Client, error) {
 	logrus.Infof("[%s] Starting complete cleanup process...", logPrefix)
 
 	// Disconnect current client if it exists
@@ -460,8 +464,8 @@ func PerformCompleteCleanup(ctx context.Context, logPrefix string, chatStorageRe
 
 // PerformCleanupAndUpdateGlobals is a convenience function that performs cleanup
 // and ensures global client synchronization
-func PerformCleanupAndUpdateGlobals(ctx context.Context, logPrefix string, chatStorageRepo domainChatStorage.IChatStorageRepository) (*sqlstore.Container, *whatsmeow.Client, error) {
-	newDB, newCli, err := PerformCompleteCleanup(ctx, logPrefix, chatStorageRepo)
+func PerformCleanupAndUpdateGlobals(ctx context.Context, logPrefix string, chatStorageRepo domainChatStorage.IChatStorageRepository, webhookUsecase domainWhatsapp.IWebhookUsecase) (*sqlstore.Container, *whatsmeow.Client, error) {
+	newDB, newCli, err := PerformCompleteCleanup(ctx, logPrefix, chatStorageRepo, webhookUsecase)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -473,7 +477,7 @@ func PerformCleanupAndUpdateGlobals(ctx context.Context, logPrefix string, chatS
 }
 
 // handleRemoteLogout performs cleanup when user logs out from their phone
-func handleRemoteLogout(ctx context.Context, chatStorageRepo domainChatStorage.IChatStorageRepository) {
+func handleRemoteLogout(ctx context.Context, chatStorageRepo domainChatStorage.IChatStorageRepository, webhookUsecase domainWhatsapp.IWebhookUsecase) {
 	logrus.Info("[REMOTE_LOGOUT] User logged out from phone - starting cleanup...")
 	logrus.Info("[REMOTE_LOGOUT] This will clear all WhatsApp session data and chat storage")
 
@@ -488,7 +492,7 @@ func handleRemoteLogout(ctx context.Context, chatStorageRepo domainChatStorage.I
 	}
 
 	// Perform complete cleanup with global client synchronization
-	_, _, err := PerformCleanupAndUpdateGlobals(ctx, "REMOTE_LOGOUT", chatStorageRepo)
+	_, _, err := PerformCleanupAndUpdateGlobals(ctx, "REMOTE_LOGOUT", chatStorageRepo, webhookUsecase)
 	if err != nil {
 		logrus.Errorf("[REMOTE_LOGOUT] Cleanup failed: %v", err)
 		return
@@ -498,24 +502,24 @@ func handleRemoteLogout(ctx context.Context, chatStorageRepo domainChatStorage.I
 }
 
 // handler is the main event handler for WhatsApp events
-func handler(ctx context.Context, rawEvt any, chatStorageRepo domainChatStorage.IChatStorageRepository) {
+func handler(ctx context.Context, rawEvt any, chatStorageRepo domainChatStorage.IChatStorageRepository, webhookUsecase domainWhatsapp.IWebhookUsecase) {
 	switch evt := rawEvt.(type) {
 	case *events.DeleteForMe:
-		handleDeleteForMe(ctx, evt, chatStorageRepo)
+		handleDeleteForMe(ctx, evt, chatStorageRepo, webhookUsecase)
 	case *events.AppStateSyncComplete:
 		handleAppStateSyncComplete(ctx, evt)
 	case *events.PairSuccess:
 		handlePairSuccess(ctx, evt)
 	case *events.LoggedOut:
-		handleLoggedOut(ctx, chatStorageRepo)
+		handleLoggedOut(ctx, chatStorageRepo, webhookUsecase)
 	case *events.Connected, *events.PushNameSetting:
 		handleConnectionEvents(ctx)
 	case *events.StreamReplaced:
 		handleStreamReplaced(ctx)
 	case *events.Message:
-		handleMessage(ctx, evt, chatStorageRepo)
+		handleMessage(ctx, evt, chatStorageRepo, webhookUsecase)
 	case *events.Receipt:
-		handleReceipt(ctx, evt)
+		handleReceipt(ctx, evt, webhookUsecase)
 	case *events.Presence:
 		handlePresence(ctx, evt)
 	case *events.HistorySync:
@@ -523,17 +527,17 @@ func handler(ctx context.Context, rawEvt any, chatStorageRepo domainChatStorage.
 	case *events.AppState:
 		handleAppState(ctx, evt)
 	case *events.GroupInfo:
-		handleGroupInfo(ctx, evt)
+		handleGroupInfo(ctx, evt, webhookUsecase)
 	case *events.CallOffer: // Handle incoming call offers
-		handleCallOfferEvent(ctx, evt)
+		handleCallOfferEvent(ctx, evt, webhookUsecase)
 	case *events.CallTerminate: // Handle call termination
-		handleCallTerminateEvent(ctx, evt)
+		handleCallTerminateEvent(ctx, evt, webhookUsecase)
 	}
 }
 
 // Event handler functions
 
-func handleDeleteForMe(ctx context.Context, evt *events.DeleteForMe, chatStorageRepo domainChatStorage.IChatStorageRepository) {
+func handleDeleteForMe(ctx context.Context, evt *events.DeleteForMe, chatStorageRepo domainChatStorage.IChatStorageRepository, webhookUsecase domainWhatsapp.IWebhookUsecase) {
 	log.Infof("Deleted message %s for %s", evt.MessageID, evt.SenderJID.String())
 
 	// Find the message to get its chat JID
@@ -558,7 +562,7 @@ func handleDeleteForMe(ctx context.Context, evt *events.DeleteForMe, chatStorage
 	// Send webhook notification for delete event
 	if len(config.WhatsappWebhook) > 0 {
 		go func() {
-			if err := forwardDeleteToWebhook(ctx, evt, message); err != nil {
+			if err := forwardDeleteToWebhook(ctx, evt, message, webhookUsecase); err != nil {
 				log.Errorf("Failed to forward delete event to webhook: %v", err)
 			}
 		}()
@@ -588,11 +592,11 @@ func handlePairSuccess(ctx context.Context, evt *events.PairSuccess) {
 	syncKeysDevice(ctx, primaryDB, secondaryDB)
 }
 
-func handleLoggedOut(ctx context.Context, chatStorageRepo domainChatStorage.IChatStorageRepository) {
+func handleLoggedOut(ctx context.Context, chatStorageRepo domainChatStorage.IChatStorageRepository, webhookUsecase domainWhatsapp.IWebhookUsecase) {
 	logrus.Warn("[REMOTE_LOGOUT] Received LoggedOut event - user logged out from phone")
 
 	// Perform comprehensive cleanup
-	handleRemoteLogout(ctx, chatStorageRepo)
+	handleRemoteLogout(ctx, chatStorageRepo, webhookUsecase)
 
 	// Broadcast final notification that cleanup is complete and ready for new login
 	websocket.Broadcast <- websocket.BroadcastMessage{
@@ -624,7 +628,7 @@ func handleStreamReplaced(_ context.Context) {
 	os.Exit(0)
 }
 
-func handleMessage(ctx context.Context, evt *events.Message, chatStorageRepo domainChatStorage.IChatStorageRepository) {
+func handleMessage(ctx context.Context, evt *events.Message, chatStorageRepo domainChatStorage.IChatStorageRepository, webhookUsecase domainWhatsapp.IWebhookUsecase) {
 	// Log message metadata
 	metaParts := buildMessageMetaParts(evt)
 	log.Infof("Received message %s from %s (%s): %+v",
@@ -649,7 +653,7 @@ func handleMessage(ctx context.Context, evt *events.Message, chatStorageRepo dom
 	handleAutoReply(ctx, evt, chatStorageRepo)
 
 	// Forward to webhook if configured
-	handleWebhookForward(ctx, evt)
+	handleWebhookForward(ctx, evt, webhookUsecase)
 }
 
 func buildMessageMetaParts(evt *events.Message) []string {
@@ -821,7 +825,7 @@ func handleAutoReply(ctx context.Context, evt *events.Message, chatStorageRepo d
 	}
 }
 
-func handleWebhookForward(ctx context.Context, evt *events.Message) {
+func handleWebhookForward(ctx context.Context, evt *events.Message, webhookUsecase domainWhatsapp.IWebhookUsecase) {
 	// Skip webhook for specific protocol messages that shouldn't trigger webhooks
 	if protocolMessage := evt.Message.GetProtocolMessage(); protocolMessage != nil {
 		protocolType := protocolMessage.GetType().String()
@@ -835,14 +839,14 @@ func handleWebhookForward(ctx context.Context, evt *events.Message) {
 	if len(config.WhatsappWebhook) > 0 &&
 		!strings.Contains(evt.Info.SourceString(), "broadcast") {
 		go func(evt *events.Message) {
-			if err := forwardMessageToWebhook(ctx, evt); err != nil {
+			if err := forwardMessageToWebhook(ctx, webhookUsecase, evt); err != nil {
 				logrus.Error("Failed forward to webhook: ", err)
 			}
 		}(evt)
 	}
 }
 
-func handleReceipt(ctx context.Context, evt *events.Receipt) {
+func handleReceipt(ctx context.Context, evt *events.Receipt, webhookUsecase domainWhatsapp.IWebhookUsecase) {
 	sendReceipt := false
 	switch evt.Type {
 	case types.ReceiptTypeRead, types.ReceiptTypeReadSelf:
@@ -857,7 +861,7 @@ func handleReceipt(ctx context.Context, evt *events.Receipt) {
 	// Note: Receipt events are not rate limited as they are critical for message delivery status
 	if len(config.WhatsappWebhook) > 0 && sendReceipt {
 		go func(e *events.Receipt) {
-			if err := forwardReceiptToWebhook(ctx, e); err != nil {
+			if err := forwardReceiptToWebhook(ctx, e, webhookUsecase); err != nil {
 				logrus.Errorf("Failed to forward ack event to webhook: %v", err)
 			}
 		}(evt)
@@ -1144,7 +1148,7 @@ func processPushNames(ctx context.Context, data *waHistorySync.HistorySync, chat
 	return nil
 }
 
-func handleGroupInfo(ctx context.Context, evt *events.GroupInfo) {
+func handleGroupInfo(ctx context.Context, evt *events.GroupInfo, webhookUsecase domainWhatsapp.IWebhookUsecase) {
 	// Only process events that have actual changes
 	hasChanges := len(evt.Join) > 0 || len(evt.Leave) > 0 || len(evt.Promote) > 0 || len(evt.Demote) > 0 ||
 		evt.Name != nil || evt.Topic != nil || evt.Locked != nil || evt.Announce != nil
@@ -1170,7 +1174,7 @@ func handleGroupInfo(ctx context.Context, evt *events.GroupInfo) {
 	// Forward group info event to webhook if configured
 	if len(config.WhatsappWebhook) > 0 {
 		go func(e *events.GroupInfo) {
-			if err := forwardGroupInfoToWebhook(ctx, e); err != nil {
+			if err := forwardGroupInfoToWebhook(ctx, e, webhookUsecase); err != nil {
 				logrus.Errorf("Failed to forward group info event to webhook: %v", err)
 			}
 		}(evt)
@@ -1178,7 +1182,7 @@ func handleGroupInfo(ctx context.Context, evt *events.GroupInfo) {
 }
 
 // handleCallOfferEvent handles incoming call offer events
-func handleCallOfferEvent(ctx context.Context, evt *events.CallOffer) {
+func handleCallOfferEvent(ctx context.Context, evt *events.CallOffer, webhookUsecase domainWhatsapp.IWebhookUsecase) {
 	log.Infof("Received call offer event: %+v", evt)
 
 	outerBody := make(map[string]any)
@@ -1206,8 +1210,6 @@ func handleCallOfferEvent(ctx context.Context, evt *events.CallOffer) {
 
 	var contactJID types.JID
 	if !evt.CallCreatorAlt.IsEmpty() {
-		contactJID = evt.CallCreatorAlt
-	} else {
 		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreator, client)
 	}
 
@@ -1242,11 +1244,11 @@ func handleCallOfferEvent(ctx context.Context, evt *events.CallOffer) {
 	}
 
 	outerBody["payload"] = payload
-	if err := forwardPayloadToConfiguredWebhooks(ctx, outerBody, "call offer event"); err != nil {
+	if err := webhookUsecase.Forward(ctx, "call offer event", outerBody); err != nil {
 		log.Errorf("Failed to forward call offer event to webhook: %v", err)
 	}
 }// handleCallTerminateEvent handles call termination events
-func handleCallTerminateEvent(ctx context.Context, evt *events.CallTerminate) {
+func handleCallTerminateEvent(ctx context.Context, evt *events.CallTerminate, webhookUsecase domainWhatsapp.IWebhookUsecase) {
 	log.Infof("Received call terminate event: %+v", evt)
 
 	outerBody := make(map[string]any)
@@ -1307,7 +1309,7 @@ func handleCallTerminateEvent(ctx context.Context, evt *events.CallTerminate) {
 	}
 
 	outerBody["payload"] = payload
-	if err := forwardPayloadToConfiguredWebhooks(ctx, outerBody, "call terminate event"); err != nil {
+	if err := webhookUsecase.Forward(ctx, "call terminate event", outerBody); err != nil {
 		log.Errorf("Failed to forward call terminate event to webhook: %v", err)
 	}
 }

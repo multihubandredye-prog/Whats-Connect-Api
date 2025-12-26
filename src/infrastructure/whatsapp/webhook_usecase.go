@@ -6,14 +6,19 @@ import (
 	"strings"
 
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
+	domainChatStorage "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/chatstorage"
 	pkgError "github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/error"
 	"github.com/sirupsen/logrus"
 )
 
-type WebhookUsecase struct{}
+type WebhookUsecase struct {
+	chatStorageRepo domainChatStorage.IChatStorageRepository
+}
 
-func NewWebhookUsecase() *WebhookUsecase {
-	return &WebhookUsecase{}
+func NewWebhookUsecase(chatStorageRepo domainChatStorage.IChatStorageRepository) *WebhookUsecase {
+	return &WebhookUsecase{
+		chatStorageRepo: chatStorageRepo,
+	}
 }
 
 func (w *WebhookUsecase) Forward(ctx context.Context, eventName string, payload map[string]any) error {
@@ -49,4 +54,8 @@ func (w *WebhookUsecase) Forward(ctx context.Context, eventName string, payload 
 	}
 
 	return nil
+}
+
+func (w *WebhookUsecase) GetChatStorageRepo() domainChatStorage.IChatStorageRepository {
+	return w.chatStorageRepo
 }

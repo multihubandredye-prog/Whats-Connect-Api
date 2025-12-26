@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"mime"
@@ -69,6 +70,13 @@ func (service serviceSend) wrapSendMessage(ctx context.Context, recipient types.
 	go func() {
 		storeCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
+
+		// Skip storing generic message if it's a poll creation message
+		// because SendPoll already stores the detailed poll message.
+		if msg.GetPollCreationMessage() != nil || msg.GetPollCreationMessageV2() != nil || msg.GetPollCreationMessageV3() != nil {
+			logrus.Debugf("wrapSendMessage: Skipping generic storage for poll creation message ID: %s", ts.ID)
+			return
+		}
 
 		if err := service.chatStorageRepo.StoreSentMessageWithContext(storeCtx, ts.ID, senderJID, recipient.String(), content, ts.Timestamp); err != nil {
 			if errors.Is(err, context.DeadlineExceeded) {
@@ -912,6 +920,34 @@ func (service serviceSend) SendPoll(ctx context.Context, request domainSend.Poll
 	}
 
 	messageSecret := hex.EncodeToString(msg.GetMessageContextInfo().GetMessageSecret())
+
+	// Convert poll options to JSON string for storage
+	pollOptionsJSON, err := json.Marshal(request.Options)
+	if err != nil {
+		logrus.Errorf("Failed to marshal poll options to JSON: %v", err)
+		// Continue without storing poll options if marshaling fails, but log the error
+		pollOptionsJSON = []byte("[]")
+	}
+
+	// Store the poll message details explicitly
+	pollMessage := &domainChatStorage.Message{
+		ID:                         ts.ID,
+		ChatJID:                    dataWaRecipient.String(),
+		Sender:                     whatsapp.GetClient().Store.ID.String(),
+		Content:                    content, // The "📊 Question" text
+		Timestamp:                  ts.Timestamp,
+		IsFromMe:                   true,
+		MediaType:                  "poll", // Indicate this is a poll message
+		PollMessageSecret:          messageSecret,
+		PollTitle:                  request.Question,
+		PollOptions:                string(pollOptionsJSON),
+		PollSelectableOptionsCount: request.MaxAnswer,
+	}
+
+	if err := service.chatStorageRepo.StoreMessage(pollMessage); err != nil {
+		logrus.Errorf("Failed to store poll message in chat storage: %v", err)
+		// Do not return error here, as the message was already sent to WhatsApp
+	}
 
 	// Manually trigger webhook for sent poll
 	go func() {

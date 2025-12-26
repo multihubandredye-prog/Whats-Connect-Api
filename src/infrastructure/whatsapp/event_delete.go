@@ -7,17 +7,18 @@ import (
 	"go.mau.fi/whatsmeow"
 
 	domainChatStorage "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/chatstorage"
+	domainWhatsapp "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/whatsapp"
 	"go.mau.fi/whatsmeow/types/events"
 )
 
 // forwardDeleteToWebhook sends a delete event to webhook
-func forwardDeleteToWebhook(ctx context.Context, evt *events.DeleteForMe, message *domainChatStorage.Message) error {
-	payload, err := createDeletePayload(ctx, cli, evt, message)
+func forwardDeleteToWebhook(ctx context.Context, evt *events.DeleteForMe, message *domainChatStorage.Message, webhookUsecase domainWhatsapp.IWebhookUsecase) error {
+	payload, err := createDeletePayload(ctx, GetClient(), evt, message) // Pass GetClient() and webhookUsecase
 	if err != nil {
 		return err
 	}
 
-	return forwardPayloadToConfiguredWebhooks(ctx, payload, "delete event")
+	return webhookUsecase.Forward(ctx, "delete event", payload)
 }
 
 // createDeletePayload creates a webhook payload for delete events

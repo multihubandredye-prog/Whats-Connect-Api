@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json" // Adicionado
 	"mime"
 	"path/filepath"
 	"regexp"
@@ -11,21 +12,12 @@ import (
 	"time"
 
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
+	domainWhatsapp "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/whatsapp"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types/events"
 )
-
-// pollInfo stores relevant information about a poll creation message.
-type pollInfo struct {
-	Title         string   // Add title for the poll
-	Options       []string
-	MessageSecret []byte // Store the message secret from the original poll creation
-}
-
-// pollStorage maps Message ID to pollInfo. This is a temporary in-memory store.
-var pollStorage = make(map[string]pollInfo)
 
 // hashSHA256 computes the SHA-256 hash of a string and returns its hexadecimal representation.
 func hashSHA256(text string) string {
@@ -56,18 +48,18 @@ func isLikelyLinkMessage(text string) bool {
 
 
 // forwardMessageToWebhook is a helper function to forward message event to webhook url
-func forwardMessageToWebhook(ctx context.Context, evt *events.Message) error {
-	payload, err := createMessagePayload(ctx, evt)
+func forwardMessageToWebhook(ctx context.Context, webhookUsecase domainWhatsapp.IWebhookUsecase, evt *events.Message) error {
+	payload, err := createMessagePayload(ctx, webhookUsecase, evt)
 	if err != nil {
 		return err
 	}
 	if payload == nil {
 		return nil
 	}
-	return forwardPayloadToConfiguredWebhooks(ctx, payload, "message event")
+	return webhookUsecase.Forward(ctx, "message event", payload)
 }
 
-func createMessagePayload(ctx context.Context, evt *events.Message) (map[string]any, error) {
+func createMessagePayload(ctx context.Context, webhookUsecase domainWhatsapp.IWebhookUsecase, evt *events.Message) (map[string]any, error) {
 	outerBody := make(map[string]any)
 	payload := make(map[string]any)
 	client := GetClient()
@@ -305,26 +297,63 @@ func createMessagePayload(ctx context.Context, evt *events.Message) (map[string]
 		}
 
 		originalPollMessageID := pollUpdateMessage.GetPollCreationMessageKey().GetID()
-		if storedPoll, ok := pollStorage[originalPollMessageID]; ok {
+		logrus.Debugf("createMessagePayload: Processing poll response for originalPollMessageID: %s", originalPollMessageID)
+
+		// Buscar informações da enquete original do chatStorageRepo
+		storedPollMessage, err := webhookUsecase.GetChatStorageRepo().GetMessageByID(originalPollMessageID)
+		if err != nil {
+			logrus.Errorf("createMessagePayload: Error retrieving original poll message with ID %s from storage: %v", originalPollMessageID, err)
+		}
+		logrus.Debugf("createMessagePayload: Stored poll message retrieved: %+v", storedPollMessage)
+		if storedPollMessage != nil {
+			logrus.Debugf("createMessagePayload: StoredPollMessage ID: %s, MediaType: %s, PollOptions: %s, PollMessageSecret: %s, PollTitle: %s",
+				storedPollMessage.ID, storedPollMessage.MediaType, storedPollMessage.PollOptions,
+				storedPollMessage.PollMessageSecret, storedPollMessage.PollTitle)
+		}
+
+		if storedPollMessage != nil && storedPollMessage.MediaType == "poll" { // Verificar se é de fato uma mensagem de enquete
+			logrus.Debugf("createMessagePayload: storedPollMessage is valid and is a poll.")
+			var storedOptions []string
+			if storedPollMessage.PollOptions != "" {
+				logrus.Debugf("createMessagePayload: StoredPollMessage.PollOptions is not empty: %s", storedPollMessage.PollOptions)
+				err = json.Unmarshal([]byte(storedPollMessage.PollOptions), &storedOptions)
+				if err != nil {
+					logrus.Errorf("createMessagePayload: Failed to unmarshal stored poll options for message ID %s: %v", originalPollMessageID, err)
+					storedOptions = []string{} // Fallback para vazio
+				} else {
+					logrus.Debugf("createMessagePayload: Unmarshalled stored options: %+v", storedOptions)
+				}
+			} else {
+				logrus.Warnf("createMessagePayload: StoredPollMessage.PollOptions is empty for message ID %s", originalPollMessageID)
+			}
+
 			if decryptedVote != nil && len(selectedOptions) > 0 {
-				for _, optionText := range storedPoll.Options {
-					if hashSHA256(optionText) == selectedOptions[0] {
+				logrus.Debugf("createMessagePayload: Decrypted vote is present and selectedOptions has length: %d", len(selectedOptions))
+				logrus.Debugf("createMessagePayload: selectedOptions[0]: %s", selectedOptions[0])
+				for _, optionText := range storedOptions {
+					optionHash := hashSHA256(optionText)
+					logrus.Debugf("createMessagePayload: Comparing stored option '%s' (hash: %s) with selected option hash '%s'", optionText, optionHash, selectedOptions[0])
+					if optionHash == selectedOptions[0] {
 						voteInfo := pollResponsePayload["vote_info"].(map[string]any)
 						voteInfo["pollSelectedResponse"] = optionText
+						logrus.Debugf("createMessagePayload: Matched selected option: %s", optionText)
 						break
 					}
-					// Removed the else if for the other case, assuming the first option is sufficient for now.
 				}
+			} else {
+				logrus.Warnf("createMessagePayload: Decrypted vote is nil or selectedOptions is empty. decryptedVote: %+v, selectedOptions: %+v", decryptedVote, selectedOptions)
 			}
-			if storedPoll.MessageSecret != nil {
-				pollResponsePayload["original_poll_message_secret"] = hex.EncodeToString(storedPoll.MessageSecret)
+			if storedPollMessage.PollMessageSecret != "" {
+				pollResponsePayload["original_poll_message_secret"] = storedPollMessage.PollMessageSecret
+			} else {
+				logrus.Warnf("createMessagePayload: storedPollMessage.PollMessageSecret is empty for message ID %s", originalPollMessageID)
 			}
 			pollResponsePayload["poll_metadata"] = map[string]any{
-				"title":   storedPoll.Title,
-				"Options": storedPoll.Options,
+				"title":   storedPollMessage.PollTitle,
+				"Options": storedOptions,
 			}
 		} else {
-			logrus.Warnf("Original poll message with ID %s not found in storage.", originalPollMessageID)
+			logrus.Warnf("createMessagePayload: Original poll message with ID %s not found or not a poll in storage. storedPollMessage: %+v", originalPollMessageID, storedPollMessage)
 		}
 		payload["pollResponse"] = pollResponsePayload
 	} else if pollMessage := evt.Message.GetPollCreationMessageV3(); pollMessage != nil {
@@ -337,16 +366,6 @@ func createMessagePayload(ctx context.Context, evt *events.Message) (map[string]
 			"Title":                  pollMessage.GetName(),
 			"Options":                options,
 			"selectable_options_count": pollMessage.GetSelectableOptionsCount(),
-		}
-
-		var msgSecret []byte
-		if evt.Message.GetMessageContextInfo() != nil && evt.Message.GetMessageContextInfo().GetMessageSecret() != nil {
-			msgSecret = evt.Message.GetMessageContextInfo().GetMessageSecret()
-		}
-		pollStorage[evt.Info.ID] = pollInfo{
-			Title:         pollMessage.GetName(),
-			Options:       options,
-			MessageSecret: msgSecret,
 		}
 	} else if liveLocationMessage := evt.Message.GetLiveLocationMessage(); liveLocationMessage != nil { // LIVE LOCATION
 		typeMessage = "live_location_message"

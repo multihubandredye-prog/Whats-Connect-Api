@@ -10,6 +10,7 @@ import (
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
 	domainApp "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/app"
 	domainChatStorage "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/chatstorage"
+	domainWhatsapp "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/whatsapp"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
 	pkgError "github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/error"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/validations"
@@ -23,11 +24,13 @@ import (
 
 type serviceApp struct {
 	chatStorageRepo domainChatStorage.IChatStorageRepository
+	webhookUsecase  domainWhatsapp.IWebhookUsecase // Changed to interface
 }
 
-func NewAppService(chatStorageRepo domainChatStorage.IChatStorageRepository) domainApp.IAppUsecase {
+func NewAppService(chatStorageRepo domainChatStorage.IChatStorageRepository, webhookUsecase domainWhatsapp.IWebhookUsecase) domainApp.IAppUsecase { // Changed to interface
 	return &serviceApp{
 		chatStorageRepo: chatStorageRepo,
+		webhookUsecase:  webhookUsecase,
 	}
 }
 
@@ -200,7 +203,7 @@ func (service *serviceApp) Logout(ctx context.Context) (err error) {
 	}
 
 	// Perform complete cleanup with global client synchronization
-	newDB, newCli, err := whatsapp.PerformCleanupAndUpdateGlobals(ctx, "MANUAL_LOGOUT", service.chatStorageRepo)
+	newDB, newCli, err := whatsapp.PerformCleanupAndUpdateGlobals(ctx, "MANUAL_LOGOUT", service.chatStorageRepo, service.webhookUsecase)
 	if err != nil {
 		logrus.Errorf("[DEBUG] Cleanup failed: %v", err)
 		return err

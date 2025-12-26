@@ -304,9 +304,9 @@ func initApp() {
 	whatsappCli = whatsapp.InitWaCLI(ctx, whatsappDB, keysDB, chatStorageRepo)
 
 	// Usecase
-	appUsecase = usecase.NewAppService(chatStorageRepo)
+	appUsecase = usecase.NewAppService(chatStorageRepo, webhookUsecase)
 	chatUsecase = usecase.NewChatService(chatStorageRepo)
-	webhookUsecase = whatsapp.NewWebhookUsecase()
+	webhookUsecase = whatsapp.NewWebhookUsecase(chatStorageRepo)
 	sendUsecase = usecase.NewSendService(appUsecase, chatStorageRepo, webhookUsecase)
 	userUsecase = usecase.NewUserService()
 	messageUsecase = usecase.NewMessageService(chatStorageRepo)

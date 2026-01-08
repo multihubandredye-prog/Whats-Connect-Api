@@ -4,7 +4,7 @@ export default {
         async handleSubmit() {
             try {
                 await this.submitApi()
-                showSuccessInfo("Desconectado")
+                showSuccessInfo("Logout success")
 
                 // fetch devices
                 this.$emit('reload-devices')
@@ -29,9 +29,9 @@ export default {
     <div class="green card" @click="handleSubmit" style="cursor: pointer">
         <div class="content">
             <a class="ui teal right ribbon label">App</a>
-            <div class="header">Sair</div>
+            <div class="header">Logout</div>
             <div class="description">
-                Remova sua sessão de login no aplicativo
+                Remove your login session in application
             </div>
         </div>
     </div>

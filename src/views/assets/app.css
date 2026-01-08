@@ -1,15 +1,14 @@
 :root {
-    --go-primary: #00ADD8;
-    --go-secondary: #007d9c;
-    --go-dark: #004d5f;
-    --wa-green: #25D366;
-    --wa-green-dark: #075E54;
-    --wa-green-light: #dcf8c6;
-    --wa-teal: #128C7E;
-    --background-color: #f0f2f5;
-    --text-color: #111B21;
-    --message-bg: #FFFFFF;
-    --shadow: rgba(0, 0, 0, 0.1);
+    --primary-color: #00ADD8; /* Golang's brand blue */
+    --secondary-color: #007d9c; /* Golang's darker blue */
+    --tertiary-color: #004d5f; /* Golang's darkest blue */
+    --background-color: #f8fbff; /* Light blue background */
+    --card-hover-color: #ffffff;
+    --text-color: #111B21; /* Keep text readable */
+    --gradient-start: #00ADD8;
+    --gradient-end: #007d9c;
+    --message-background: #FFFFFF;
+    --success-blue: #00ADD8;
 }
 
 body {
@@ -25,7 +24,7 @@ body {
 }
 
 .main-header {
-    background: var(--go-primary) !important;
+    background: var(--primary-color) !important;
     color: white !important;
     padding: 1.5em 2em !important;
     border-radius: 24px !important;
@@ -180,19 +179,19 @@ body {
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     border-radius: 16px !important;
     margin: 0.7em !important;
-    background-color: var(--message-bg) !important;
+    background-color: var(--message-background) !important;
     border: 1px solid rgba(0, 173, 216, 0.1);
 }
 
 .ui.cards > .card:hover {
     transform: translateY(-8px) !important;
     box-shadow: 0 12px 24px rgba(0, 173, 216, 0.15) !important;
-    background-color: var(--wa-green-light) !important;
+    background-color: var(--card-hover-color) !important;
 }
 
 .ui.horizontal.divider {
     font-size: 1.3em !important;
-    color: var(--go-secondary) !important;
+    color: var(--secondary-color) !important;
     margin: 2.5em 0 !important;
     font-weight: 700 !important;
     text-transform: uppercase;
@@ -203,8 +202,8 @@ body {
     border-radius: 16px !important;
     box-shadow: 0 4px 8px rgba(0, 173, 216, 0.1) !important;
     border: 1px solid rgba(0, 173, 216, 0.2) !important;
-    background-color: var(--wa-green-light) !important;
-    color: var(--wa-green-dark) !important;
+    background-color: rgba(230, 248, 255, 0.8) !important;
+    color: var(--success-blue) !important;
     animation: slideIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     backdrop-filter: blur(10px);
 }
@@ -217,7 +216,8 @@ body {
 .ui.button {
     border-radius: 12px !important;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-    background: var(--go-primary) !important;
+    /* background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important; */
+    /* background: var(--primary-color) !important; */
     color: white !important;
     font-weight: 600 !important;
     letter-spacing: 0.5px;
@@ -226,7 +226,7 @@ body {
 .ui.button:hover {
     transform: translateY(-3px) !important;
     box-shadow: 0 8px 16px rgba(0, 173, 216, 0.2) !important;
-    background: var(--go-secondary) !important;
+    filter: brightness(0.95);
 }
 
 .ui.form input, .ui.form textarea {
@@ -236,7 +236,7 @@ body {
 }
 
 .ui.form input:focus, .ui.form textarea:focus {
-    border-color: var(--go-primary) !important;
+    border-color: var(--primary-color) !important;
     box-shadow: 0 0 0 3px rgba(0, 173, 216, 0.1) !important;
 }
 
@@ -247,7 +247,7 @@ body {
 .ui.toast {
     border-radius: 16px !important;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
-    background-color: var(--message-bg) !important;
+    background-color: var(--message-background) !important;
     border: 1px solid rgba(0, 173, 216, 0.1);
 }
 
@@ -270,13 +270,13 @@ body {
 
 .ui.modal {
     border-radius: 20px !important;
-    background-color: var(--message-bg) !important;
+    background-color: var(--message-background) !important;
     overflow: hidden;
 }
 
 .ui.modal > .header {
     border-radius: 20px 20px 0 0 !important;
-    background: var(--go-primary) !important;
+    background: var(--gradient-start) !important;
     color: white !important;
     padding: 1.5em !important;
 }
@@ -288,19 +288,20 @@ body {
 }
 
 .ui.modal > .actions > .ui.button {
-    background: var(--go-primary) !important;
+    background: var(--primary-color) !important;
     color: white !important;
     font-weight: 600 !important;
     letter-spacing: 0.5px;
 }
 
+/* Splash Screen Styles */
 #splash-screen {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, var(--go-primary) 0%, var(--go-secondary) 100%);
+    background: linear-gradient(135deg, #00ADD8 0%, #007d9c 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -345,4 +346,48 @@ body {
 .splash-spinner {
     margin-top: 20px;
     align-self: center;
+}
+
+#splash-screen > * {
+    flex-shrink: 0;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+@keyframes glassShimmer {
+    0%, 100% {
+        filter: drop-shadow(0 8px 32px rgba(0, 0, 0, 0.15)) brightness(1);
+    }
+    50% {
+        filter: drop-shadow(0 12px 40px rgba(0, 0, 0, 0.2)) brightness(1.05);
+    }
+}
+
+/* Responsive splash icon design */
+@media (max-width: 768px) {
+    .splash-icon {
+        width: 5em;
+        height: 5em;
+        border-radius: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .splash-icon {
+        width: 4em;
+        height: 4em;
+        border-radius: 16px;
+    }
+}
+
+/* High-DPI/Retina display optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .splash-icon {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: optimize-contrast;
+        image-rendering: crisp-edges;
+    }
 }

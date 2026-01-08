@@ -4,7 +4,9 @@ import (
 	"context"
 	"time"
 
-	domainWhatsapp "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/whatsapp"
+	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/pollstore"
+	"github.com/sirupsen/logrus"
+	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 )
@@ -12,13 +14,13 @@ import (
 func getReceiptTypeDescription(evt types.ReceiptType) string {
 	switch evt {
 	case types.ReceiptTypeDelivered:
-		return "Significa que a mensagem foi entregue ao dispositivo (mas o usuário pode não ter percebido)."
+		return "means the message was delivered to the device (but the user might not have noticed)."
 	case types.ReceiptTypeSender:
 		return "sent by your other devices when a message you sent is delivered to them."
 	case types.ReceiptTypeRetry:
 		return "the message was delivered to the device, but decrypting the message failed."
 	case types.ReceiptTypeRead:
-		return "O usuário abriu o chat e viu a mensagem."
+		return "the user opened the chat and saw the message."
 	case types.ReceiptTypeReadSelf:
 		return "the current user read a message from a different device, and has read receipts disabled in privacy settings."
 	case types.ReceiptTypePlayed:
@@ -33,61 +35,74 @@ func getReceiptTypeDescription(evt types.ReceiptType) string {
 	}
 }
 
-// forwardReceiptToWebhook forwards message acknowledgement events to the configured webhook URLs
-func forwardReceiptToWebhook(ctx context.Context, evt *events.Receipt, webhookUsecase domainWhatsapp.IWebhookUsecase) error {
-	payload := createReceiptPayload(ctx, evt, webhookUsecase)
-	return webhookUsecase.Forward(ctx, "message ack event", payload)
-}
-
 // createReceiptPayload creates a webhook payload for message acknowledgement (receipt) events
-func createReceiptPayload(ctx context.Context, evt *events.Receipt, webhookUsecase domainWhatsapp.IWebhookUsecase) map[string]any {
-	outerBody := make(map[string]any)
+func createReceiptPayload(ctx context.Context, evt *events.Receipt, deviceID string, client *whatsmeow.Client) map[string]any {
+	body := make(map[string]any)
 	payload := make(map[string]any)
 
-	// Add message ID (use first message ID if multiple)
+	// Add message IDs
 	if len(evt.MessageIDs) > 0 {
 		payload["ids"] = evt.MessageIDs
-	}
 
-	client := GetClient()
-	if client != nil {
-		realJID := NormalizeJIDFromLID(ctx, evt.Chat, client)
-		contact, err := client.Store.Contacts.GetContact(ctx, realJID)
-		if err == nil && contact.Found {
-			payload["senderPushname"] = contact.PushName
-		}
-
-		payload["receiverNumber"] = realJID.User
-		if evt.Chat.Server == "lid" {
-			payload["userLid"] = evt.Chat.User
+		// Enrich with original message data if it's a poll
+		if pollData, found := pollstore.DefaultPollStore.GetPoll(evt.MessageIDs[0]); found {
+			payload["poll"] = map[string]any{
+				"question": pollData.Question,
+				"options":  pollData.Options,
+			}
 		}
 	}
 
-	var eventType string
+	// Add chat_id
+	payload["chat_id"] = evt.Chat.ToNonAD().String()
 
+	// Build from/from_lid fields from sender
+	senderJID := evt.Sender
+
+	if senderJID.Server == "lid" {
+		payload["from_lid"] = senderJID.ToNonAD().String()
+	}
+
+	// Resolve sender JID (convert LID to phone number if needed)
+	normalizedSenderJID := NormalizeJIDFromLID(ctx, senderJID, client)
+	payload["from"] = normalizedSenderJID.ToNonAD().String()
+
+	// Receipt type
 	if evt.Type == types.ReceiptTypeDelivered {
-		eventType = "message_sent"
-		payload["typeEvent"] = "delivered"
-		payload["typeMessage"] = "message_sent"
-	} else if evt.Type == types.ReceiptTypeRead {
-		eventType = "message_read"
-		payload["typeEvent"] = "read"
-		// typeMessage is removed as per user request for read receipts
+		payload["receipt_type"] = "delivered"
 	} else {
-		eventType = "message.ack" // Default event type
-		payload["typeEvent"] = evt.Type
+		payload["receipt_type"] = string(evt.Type)
 	}
-	payload["descriptionEvent"] = getReceiptTypeDescription(evt.Type)
+	payload["receipt_type_description"] = getReceiptTypeDescription(evt.Type)
 
-	outerBody["payload"] = payload
-	outerBody["event"] = eventType
+	// Wrap in body structure
+	body["event"] = "message.ack"
+	body["timestamp"] = evt.Timestamp.Format(time.RFC3339)
+	if deviceID != "" {
+		body["device_id"] = deviceID
+	}
+	body["payload"] = payload
 
-	loc, err := time.LoadLocation("America/Sao_Paulo")
-	if err == nil {
-		outerBody["timestamp"] = evt.Timestamp.In(loc).Format("02/01/2006 15:04")
-	} else {
-		outerBody["timestamp"] = evt.Timestamp.Format("02/01/2006 15:04")
+	return body
+}
+
+// forwardReceiptToWebhook forwards message acknowledgement events to the configured webhook URLs.
+//
+// IMPORTANT: We only forward receipts from the primary device (Device == 0).
+// WhatsApp sends separate receipt events for each linked device (phone, web, desktop, etc.)
+// of a user. For example, if a user has 3 devices, you would receive 3 "delivered" receipts
+// for the same message. To avoid duplicate webhooks and simplify downstream processing,
+// we only send the receipt from the primary device (Device == 0).
+//
+// If you need receipts from all devices in the future, remove the Device == 0 check below.
+func forwardReceiptToWebhook(ctx context.Context, evt *events.Receipt, deviceID string, client *whatsmeow.Client) error {
+	// Only forward receipts from the primary device to avoid duplicates.
+	// See function comment above for detailed explanation.
+	if evt.Sender.Device != 0 {
+		logrus.Debugf("Skipping receipt webhook for linked device %d (only primary device receipts are forwarded)", evt.Sender.Device)
+		return nil
 	}
 
-	return outerBody
+	payload := createReceiptPayload(ctx, evt, deviceID, client)
+	return forwardPayloadToConfiguredWebhooks(ctx, payload, "message ack event")
 }

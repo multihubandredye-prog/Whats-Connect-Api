@@ -115,10 +115,10 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor:pointer;">
         <div class="content">
-            <a class="ui blue right ribbon label">Enviar</a>
-            <div class="header">Enviar Sticker</div>
+            <a class="ui blue right ribbon label">Send</a>
+            <div class="header">Send Sticker</div>
             <div class="description">
-                Envie figurinhas com conversão automática para o formato WebP
+                Send sticker with automatic conversion to WebP format
                 <div class="ui blue horizontal label">jpg/jpeg/png/webp/gif</div>
             </div>
         </div>
@@ -128,7 +128,7 @@ export default {
     <div class="ui small modal" id="modalSendSticker">
         <i class="close icon"></i>
         <div class="header">
-            Enviar Sticker
+            Send Sticker
         </div>
         <div class="content" style="max-height: 70vh; overflow-y: auto;">
             <form class="ui form">
@@ -145,14 +145,14 @@ export default {
                 </div>
                 
                 <div class="field" v-if="isShowAttributes()">
-                    <label>Como encaminhado</label>
+                    <label>Is Forwarded</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="is forwarded" v-model="is_forwarded">
-                        <label>Marcar Sticker como encaminhado</label>
+                        <label>Mark sticker as forwarded</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Duração de desaparecimento min 5 - max 7776000 (segundos)</label>
+                    <label>Disappearing Duration (seconds)</label>
                     <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
                 </div>
                 <div class="field">
@@ -160,13 +160,13 @@ export default {
                     <input type="text" v-model="sticker_url" placeholder="https://example.com/sticker.png"
                            aria-label="sticker_url"/>
                 </div>
-                <div style="text-align: left; font-weight: bold; margin: 10px 0;">ou você pode carregar o sticker do seu dispositivo.</div>
+                <div style="text-align: left; font-weight: bold; margin: 10px 0;">or you can upload sticker from your device</div>
                 <div class="field" style="padding-bottom: 30px">
-                    <label>Sticker Imagem</label>
+                    <label>Sticker Image</label>
                     <input type="file" style="display: none" id="file_sticker" accept="image/png,image/jpg,image/jpeg,image/webp,image/gif" @change="handleStickerChange"/>
                     <label for="file_sticker" class="ui positive medium blue left floated button" style="color: white">
                         <i class="ui upload icon"></i>
-                        Carregar sticker
+                        Upload sticker
                     </label>
                     <div v-if="preview_url" style="margin-top: 60px">
                         <div class="ui segment">
@@ -181,7 +181,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                  :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Enviar
+                Send
                 <i class="send icon"></i>
             </button>
         </div>

@@ -4,6 +4,7 @@ import "time"
 
 // Chat represents a WhatsApp chat/conversation
 type Chat struct {
+	DeviceID            string    `db:"device_id"`
 	JID                 string    `db:"jid"`
 	Name                string    `db:"name"`
 	LastMessageTime     time.Time `db:"last_message_time"`
@@ -16,6 +17,7 @@ type Chat struct {
 type Message struct {
 	ID            string    `db:"id"`
 	ChatJID       string    `db:"chat_jid"`
+	DeviceID      string    `db:"device_id"`
 	Sender        string    `db:"sender"`
 	Content       string    `db:"content"`
 	Timestamp     time.Time `db:"timestamp"`
@@ -25,14 +27,10 @@ type Message struct {
 	URL           string    `db:"url"`
 	MediaKey      []byte    `db:"media_key"`
 	FileSHA256    []byte    `db:"file_sha256"`
-	FileEncSHA256              []byte    `db:"file_enc_sha256"`
-	FileLength                uint64    `db:"file_length"`
-	PollMessageSecret         string    `db:"poll_message_secret"` // New field
-	PollTitle                 string    `db:"poll_title"`          // New field
-	PollOptions               string    `db:"poll_options"`        // New field (JSON string)
-	PollSelectableOptionsCount int       `db:"poll_selectable_options_count"` // New field
-	CreatedAt                 time.Time `db:"created_at"`
-	UpdatedAt                 time.Time `db:"updated_at"`
+	FileEncSHA256 []byte    `db:"file_enc_sha256"`
+	FileLength    uint64    `db:"file_length"`
+	CreatedAt     time.Time `db:"created_at"`
+	UpdatedAt     time.Time `db:"updated_at"`
 }
 
 // MediaInfo represents downloadable media information
@@ -48,6 +46,15 @@ type MediaInfo struct {
 	FileLength    uint64
 }
 
+// DeviceRecord tracks a registered device for persistence purposes.
+type DeviceRecord struct {
+	DeviceID    string    `db:"device_id"`
+	DisplayName string    `db:"display_name"`
+	JID         string    `db:"jid"`
+	CreatedAt   time.Time `db:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at"`
+}
+
 // MessageFilter represents query filters for messages
 type MessageFilter struct {
 	ChatJID   string
@@ -61,6 +68,7 @@ type MessageFilter struct {
 
 // ChatFilter represents query filters for chats
 type ChatFilter struct {
+	DeviceID   string
 	Limit      int
 	Offset     int
 	SearchName string

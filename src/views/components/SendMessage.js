@@ -12,6 +12,7 @@ export default {
             text: '',
             reply_message_id: '',
             is_forwarded: false,
+            mention_everyone: false,
             duration: 0,
             loading: false,
         }
@@ -31,6 +32,9 @@ export default {
         },
         isShowReplyId() {
             return this.type !== window.TYPESTATUS;
+        },
+        isGroup() {
+            return this.type === window.TYPEGROUP;
         },
         isValidForm() {
             // Validate phone number is not empty except for status type
@@ -70,6 +74,11 @@ export default {
                     payload.duration = this.duration;
                 }
 
+                // Add mentions if mention_everyone is checked (only for groups)
+                if (this.mention_everyone && this.type === window.TYPEGROUP) {
+                    payload.mentions = ["@everyone"];
+                }
+
                 const response = await window.http.post('/send/message', payload);
                 this.handleReset();
                 return response.data.message;
@@ -87,16 +96,17 @@ export default {
             this.text = '';
             this.reply_message_id = '';
             this.is_forwarded = false;
+            this.mention_everyone = false;
             this.duration = 0;
         },
     },
     template: `
     <div class="blue card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui blue right ribbon label">Enviar</a>
-            <div class="header">Enviar Mensagem</div>
+            <a class="ui blue right ribbon label">Send</a>
+            <div class="header">Send Message</div>
             <div class="description">
-                Envie qualquer mensagem para um usuário ou grupo.
+                Send any message to user or group
             </div>
         </div>
     </div>
@@ -105,31 +115,38 @@ export default {
     <div class="ui small modal" id="modalSendMessage">
         <i class="close icon"></i>
         <div class="header">
-            Enviar Mensagem
+            Send Message
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone" :show-status="true"/>
                 <div class="field" v-if="isShowReplyId()">
-                    <label>ID da mensagem de resposta</label>
+                    <label>Reply Message ID</label>
                     <input v-model="reply_message_id" type="text"
-                           placeholder="Opcional: 57D29F74B7FC62F57D8AC2C840279B5B/3EB0288F008D32FCD0A424"
+                           placeholder="Optional: 57D29F74B7FC62F57D8AC2C840279B5B/3EB0288F008D32FCD0A424"
                            aria-label="reply_message_id">
                 </div>
                 <div class="field">
-                    <label>Mensagem</label>
-                    <textarea v-model="text" placeholder="Olá, este é um texto de mensagem"
+                    <label>Message</label>
+                    <textarea v-model="text" placeholder="Hello this is message text"
                               aria-label="message"></textarea>
                 </div>
                 <div class="field" v-if="isShowReplyId()">
-                    <label>Como Encaminhado</label>
+                    <label>Is Forwarded</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="is forwarded" v-model="is_forwarded">
-                        <label>Marcar mensagem como encaminhada</label>
+                        <label>Mark message as forwarded</label>
+                    </div>
+                </div>
+                <div class="field" v-if="isGroup()">
+                    <label>Mention Everyone</label>
+                    <div class="ui toggle checkbox">
+                        <input type="checkbox" aria-label="mention everyone" v-model="mention_everyone">
+                        <label>Mention all group participants (@everyone)</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Duração de desaparecimento min 5 - max 7776000 (segundos)</label>
+                    <label>Disappearing Duration (seconds)</label>
                     <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
                 </div>
             </form>
@@ -138,7 +155,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                  :class="{'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Enviar
+                Send
                 <i class="send icon"></i>
             </button>
         </div>

@@ -82,7 +82,6 @@ export default {
                     <select v-model="action" class="ui dropdown">
                         <option value="start">Start Typing</option>
                         <option value="stop">Stop Typing</option>
-                        <option value="recording">Start Recording</option>
                     </select>
                 </div>
             </form>

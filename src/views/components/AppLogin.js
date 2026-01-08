@@ -1,7 +1,10 @@
 export default {
     name: 'AppLogin',
     props: {
-        connected: null,
+        loggedIn: {
+            type: Boolean,
+            default: false,
+        },
     },
     data() {
         return {
@@ -13,7 +16,7 @@ export default {
     methods: {
         async openModal() {
             try {
-                if (this.connected) throw Error('You are already logged in.');
+                if (this.loggedIn) throw Error('You are already logged in.');
 
                 await this.submitApi();
                 $('#modalLogin').modal({
@@ -85,9 +88,9 @@ export default {
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
             <a class="ui teal right ribbon label">App</a>
-            <div class="header">Conectar</div>
+            <div class="header">Login</div>
             <div class="description">
-                Escaneie seu código QR para acessar todas as funcionalidades da API
+                Scan your QR code to access all API capabilities.
             </div>
         </div>
     </div>

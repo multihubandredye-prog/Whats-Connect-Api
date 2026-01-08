@@ -133,12 +133,12 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor:pointer;">
         <div class="content">
-            <a class="ui blue right ribbon label">Enviar</a>
-            <div class="header">Enviar Imagem </div>
+            <a class="ui blue right ribbon label">Send</a>
+            <div class="header">Send Image</div>
             <div class="description">
-                Tipos Permitidos
+                Send image with
                 <div class="ui blue horizontal label">jpg/jpeg/png</div>
-             
+                type
             </div>
         </div>
     </div>
@@ -147,54 +147,54 @@ export default {
     <div class="ui small modal" id="modalSendImage">
         <i class="close icon"></i>
         <div class="header">
-            Enviar Imagem
+            Send Image
         </div>
         <div class="content" style="max-height: 70vh; overflow-y: auto;">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone" :show-status="true"/>
                 
                 <div class="field">
-                    <label>Legenda</label>
-                    <textarea v-model="caption" type="text" placeholder="Olá, esta é a legenda da imagem"
+                    <label>Caption</label>
+                    <textarea v-model="caption" type="text" placeholder="Hello this is image caption"
                               aria-label="caption"></textarea>
                 </div>
                 <div class="field" v-if="isShowAttributes()">
-                    <label>Visualização única</label>
+                    <label>View Once</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="view once" v-model="view_once">
-                        <label>Ative para Visualização única</label>
+                        <label>Check for enable one time view</label>
                     </div>
                 </div>
                 <div class="field" v-if="isShowAttributes()">
-                    <label>Comprimir</label>
+                    <label>Compress</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="compress" v-model="compress">
-                        <label>Marque para comprimir a imagem para um tamanho menor</label>
+                        <label>Check for compressing image to smaller size</label>
                     </div>
                 </div>
                 <div class="field" v-if="isShowAttributes() && !view_once">
-                    <label>Como encaminhado</label>
+                    <label>Is Forwarded</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="is forwarded" v-model="is_forwarded">
-                        <label>Marcar mensagem como encaminhada</label>
+                        <label>Mark image as forwarded</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Duração de desaparecimento min 5 - max 7776000 (segundos)</label>
+                    <label>Disappearing Duration (seconds)</label>
                     <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
                 </div>
                 <div class="field">
-                    <label>Imagem URL</label>
+                    <label>Image URL</label>
                     <input type="text" v-model="image_url" placeholder="https://example.com/image.jpg"
                            aria-label="image_url"/>
                 </div>
-                <div style="text-align: left; font-weight: bold; margin: 10px 0;">ou você pode carregar uma imagem do seu dispositivo</div>
+                <div style="text-align: left; font-weight: bold; margin: 10px 0;">or you can upload image from your device</div>
                 <div class="field" style="padding-bottom: 30px">
-                    <label>Imagem</label>
+                    <label>Image</label>
                     <input type="file" style="display: none" id="file_image" accept="image/png,image/jpg,image/jpeg" @change="handleImageChange"/>
                     <label for="file_image" class="ui positive medium green left floated button" style="color: white">
                         <i class="ui upload icon"></i>
-                        Carregar imagem
+                        Upload image
                     </label>
                     <div v-if="preview_url" style="margin-top: 60px">
                         <img :src="preview_url" style="max-width: 100%; max-height: 300px; object-fit: contain" />
@@ -206,7 +206,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                  :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Enviar
+                Send
                 <i class="send icon"></i>
             </button>
         </div>

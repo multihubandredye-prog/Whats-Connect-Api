@@ -31,8 +31,6 @@ var knownDocumentMIMEByExtension = map[string]string{
 	".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 	".ppt":  "application/vnd.ms-powerpoint",
 	".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-	".zip":  "application/zip",
-	".pdf":  "application/pdf",
 }
 
 var knownDocumentExtensionByMIME map[string]string
@@ -611,21 +609,45 @@ func SanitizePhone(phone *string) {
 
 // IsOnWhatsapp checks if a number is registered on WhatsApp
 func IsOnWhatsapp(client *whatsmeow.Client, jid string) bool {
-	// only check if the jid a user with @s.whatsapp.net
+	// only check if the jid is a user with @s.whatsapp.net
 	if strings.Contains(jid, "@s.whatsapp.net") {
-		data, err := client.IsOnWhatsApp(context.Background(), []string{jid})
+		// Extract phone number from JID and add + prefix for international format
+		phone := strings.TrimSuffix(jid, "@s.whatsapp.net")
+		if phone == "" {
+			return false
+		}
+
+		// whatsmeow expects international format with + prefix
+		if !strings.HasPrefix(phone, "+") {
+			phone = "+" + phone
+		}
+
+		// Add timeout to prevent indefinite blocking
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		data, err := client.IsOnWhatsApp(ctx, []string{phone})
 		if err != nil {
 			logrus.Error("Failed to check if user is on whatsapp: ", err)
 			return false
 		}
 
+		// Empty response means number not found/invalid
+		if len(data) == 0 {
+			return false
+		}
+
+		// Check if any result indicates the number is NOT on WhatsApp
 		for _, v := range data {
 			if !v.IsIn {
 				return false
 			}
 		}
+
+		return true
 	}
 
+	// For non-user JIDs (groups, newsletters), skip validation
 	return true
 }
 
@@ -654,10 +676,10 @@ func MustLogin(client *whatsmeow.Client) {
 
 // Internal message types for event handling
 type EvtMessage struct {
-	Message       string `json:"Caption"`
+	Text          string `json:"text"`
 	ID            string `json:"id"`
-	RepliedID     string `json:"replied_id"`
-	QuotedMessage string `json:"quotedMessage"`
+	RepliedId     string `json:"replied_id"`
+	QuotedMessage string `json:"quoted_message"`
 }
 
 type EvtReaction struct {
@@ -677,40 +699,19 @@ func GetMessageDigestOrSignature(msg, key []byte) (string, error) {
 
 // BuildEventMessage builds event message structure
 func BuildEventMessage(evt *events.Message) (message EvtMessage) {
+	message.Text = evt.Message.GetConversation()
 	message.ID = evt.Info.ID
 
-	// Prioritize media captions
-	if img := evt.Message.GetImageMessage(); img != nil && img.GetCaption() != "" {
-		message.Message = img.GetCaption()
-		return message
-	}
-	if vid := evt.Message.GetVideoMessage(); vid != nil && vid.GetCaption() != "" {
-		message.Message = vid.GetCaption()
-		return message
-	}
-	if doc := evt.Message.GetDocumentMessage(); doc != nil && doc.GetCaption() != "" {
-		message.Message = doc.GetCaption()
-		return message
-	}
-    if ptv := evt.Message.GetPtvMessage(); ptv != nil && ptv.GetCaption() != "" {
-        message.Message = ptv.GetCaption()
-        return message
-    }
-
-
-	// Fallback to text messages
-	if conv := evt.Message.GetConversation(); conv != "" {
-		message.Message = conv
-	} else if extendedMessage := evt.Message.GetExtendedTextMessage(); extendedMessage != nil {
-		message.Message = extendedMessage.GetText()
-		message.RepliedID = extendedMessage.ContextInfo.GetStanzaID()
+	if extendedMessage := evt.Message.GetExtendedTextMessage(); extendedMessage != nil {
+		message.Text = extendedMessage.GetText()
+		message.RepliedId = extendedMessage.ContextInfo.GetStanzaID()
 		message.QuotedMessage = extendedMessage.ContextInfo.GetQuotedMessage().GetConversation()
 	} else if protocolMessage := evt.Message.GetProtocolMessage(); protocolMessage != nil {
 		if editedMessage := protocolMessage.GetEditedMessage(); editedMessage != nil {
-			if conv := editedMessage.GetConversation(); conv != "" {
-				message.Message = conv
-			} else if ext := editedMessage.GetExtendedTextMessage(); ext != nil {
-				message.Message = ext.GetText()
+			if extendedText := editedMessage.GetExtendedTextMessage(); extendedText != nil {
+				message.Text = extendedText.GetText()
+				message.RepliedId = extendedText.ContextInfo.GetStanzaID()
+				message.QuotedMessage = extendedText.ContextInfo.GetQuotedMessage().GetConversation()
 			}
 		}
 	}

@@ -94,10 +94,10 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui blue right ribbon label">Enviar</a>
-            <div class="header">Enviar Contato</div>
+            <a class="ui blue right ribbon label">Send</a>
+            <div class="header">Send Contact</div>
             <div class="description">
-                Enviar contato para usuário ou grupo
+                Send contact to user or group
             </div>
         </div>
     </div>
@@ -106,31 +106,31 @@ export default {
     <div class="ui small modal" id="modalSendContact">
         <i class="close icon"></i>
         <div class="header">
-            Enviar Contato
+            Send Contact
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone"/>
                 
                 <div class="field">
-                    <label>Nome do contato</label>
-                    <input v-model="card_name" type="text" placeholder="Por favor insira o nome do contato"
+                    <label>Contact Name</label>
+                    <input v-model="card_name" type="text" placeholder="Please enter contact name"
                            aria-label="contact name">
                 </div>
                 <div class="field">
-                    <label>Número do contato</label>
-                    <input v-model="card_phone" type="text" placeholder="Por favor insira o telefone de contato"
+                    <label>Contact Phone</label>
+                    <input v-model="card_phone" type="text" placeholder="Please enter contact phone"
                            aria-label="contact phone">
                 </div>
                 <div class="field" v-if="isShowAttributes()">
-                    <label>Como encaminhado</label>
+                    <label>Is Forwarded</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="is forwarded" v-model="is_forwarded">
-                        <label>Marcar contato como encaminhado</label>
+                        <label>Mark contact as forwarded</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Duração de desaparecimento min 5 - max 7776000 (segundos)</label>
+                    <label>Disappearing Duration (seconds)</label>
                     <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
                 </div>
             </form>
@@ -138,7 +138,7 @@ export default {
         <div class="actions">
             <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Enviar
+                Send
                 <i class="send icon"></i>
             </button>
         </div>

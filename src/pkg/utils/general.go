@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"image"
 	_ "image/gif"  // Register GIF format
@@ -10,7 +9,6 @@ import (
 	_ "image/png"  // For PNG encoding
 	"io"
 	"math"
-	"mime"
 	"net/http"
 	"net/url"
 	"os"
@@ -20,10 +18,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/PuerkitoBio/goquery"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
+	"github.com/sirupsen/logrus"
 	_ "golang.org/x/image/webp" // Register WebP format
 )
 
@@ -476,118 +473,15 @@ func FormatBusinessHourTime(timeValue any) string {
 	return fmt.Sprintf("%02d:%02d", hours, minutes)
 }
 
-var knownMIMEExtensions = map[string]string{
-	"video/mp4": ".mp4",
-	"image/jpeg": ".jpeg",
-	"image/png": ".png",
-	"image/gif": ".gif",
-	"application/pdf": ".pdf",
-	"application/zip": ".zip",
-	// Add other common MIME types as needed
-}
-
-// SaveBase64ToFile decodes a base64 string and saves it to a file.
-// It handles base64 strings with or without a MIME type prefix.
-func SaveBase64ToFile(base64Str, fileNamePrefix string) (filePath, fileName string, err error) {
-	// Find and remove the base64 prefix (e.g., "data:image/png;base64,")
-	b64data := base64Str
-	if s := strings.Split(b64data, "base64,"); len(s) > 1 {
-		b64data = s[1]
-	}
-
-	// Decode the base64 string
-	decodedData, err := base64.StdEncoding.DecodeString(b64data)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to decode base64: %v", err)
-	}
-
-	// Detect content type to get the correct file extension
-	mimeType := http.DetectContentType(decodedData)
-	logrus.Debugf("Detected MIME type for base64 file: %s", mimeType)
-
-	var extension string // Declared once here
-
-	// Try custom known MIME extensions first
-	if ext, ok := knownMIMEExtensions[mimeType]; ok {
-		extension = ext // Assign to already declared variable
-	} else {
-		// Fallback to standard mime package
-		extensions, _ := mime.ExtensionsByType(mimeType)
-		if len(extensions) > 0 {
-			extension = extensions[0] // Assign to already declared variable
+// UniqueStrings removes duplicate strings from a slice while preserving order
+func UniqueStrings(input []string) []string {
+	seen := make(map[string]bool)
+	result := []string{}
+	for _, s := range input {
+		if !seen[s] {
+			seen[s] = true
+			result = append(result, s)
 		}
 	}
-
-	if extension == "" { // Check if extension was successfully determined
-		return "", "", fmt.Errorf("could not determine file extension for MIME type %s", mimeType)
-	}
-
-	// Generate a unique filename
-	fileName = fmt.Sprintf("%s-%d%s", fileNamePrefix, time.Now().UnixNano(), extension)
-	filePath = filepath.Join(config.PathSendItems, fileName)
-
-	// Write the decoded data to a file
-	err = os.WriteFile(filePath, decodedData, 0644)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to write to file: %v", err)
-	}
-
-	return filePath, fileName, nil
+	return result
 }
-
-func DownloadFileFromURL(fileURL string) ([]byte, string, error) {
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 10 {
-				return fmt.Errorf("too many redirects")
-			}
-			return nil
-		},
-	}
-
-	resp, err := client.Get(fileURL)
-	if err != nil {
-		return nil, "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, "", fmt.Errorf("HTTP request failed with status: %s", resp.Status)
-	}
-
-	// Basic check for content type
-	contentType := strings.TrimSpace(strings.Split(resp.Header.Get("Content-Type"), ";")[0])
-	// You might want to have a list of allowed MIME types for documents
-	// For now, we'll be lenient but this could be a security risk.
-	logrus.Debugf("Downloading file with content type: %s", contentType)
-
-	// Validate content length when it is provided by the server.
-	maxSize := config.WhatsappSettingMaxDownloadSize
-	if resp.ContentLength > 0 && resp.ContentLength > maxSize {
-		return nil, "", fmt.Errorf("file size %d exceeds maximum allowed size %d", resp.ContentLength, maxSize)
-	}
-
-	limitedReader := &io.LimitedReader{R: resp.Body, N: maxSize}
-	fileData, err := io.ReadAll(limitedReader)
-	if err != nil {
-		return nil, "", err
-	}
-	if int64(len(fileData)) >= maxSize {
-		return nil, "", fmt.Errorf("downloaded file size of %d bytes exceeds or equals the maximum allowed size of %d bytes", len(fileData), maxSize)
-	}
-
-	// Derive filename from URL path
-	segments := strings.Split(fileURL, "/")
-	fileName := segments[len(segments)-1]
-	fileName = strings.Split(fileName, "?")[0]
-	if fileName == "" {
-		fileName = fmt.Sprintf("file_%d", time.Now().Unix())
-	}
-	return fileData, fileName, nil
-}
-
-func init() {
-	mime.AddExtensionType("video/mp4", ".mp4")
-}
-

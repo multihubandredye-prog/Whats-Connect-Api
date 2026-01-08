@@ -104,7 +104,7 @@ func TestValidateSendImage(t *testing.T) {
 				},
 				Image: nil,
 			}},
-			err: pkgError.ValidationError("either Image, ImageURL or ImagePath must be provided"),
+			err: pkgError.ValidationError("either Image or ImageURL must be provided"),
 		},
 		{
 			name: "should error with invalid image type",
@@ -173,7 +173,7 @@ func TestValidateSendFile(t *testing.T) {
 				},
 				File: nil,
 			}},
-			err: pkgError.ValidationError("either File, FileURL or FilePath must be provided"),
+			err: pkgError.ValidationError("file: cannot be blank."),
 		},
 	}
 
@@ -185,7 +185,116 @@ func TestValidateSendFile(t *testing.T) {
 	}
 }
 
+func TestValidateSendVideo(t *testing.T) {
+	file := &multipart.FileHeader{
+		Filename: "sample-video.mp4",
+		Size:     100,
+		Header:   map[string][]string{"Content-Type": {"video/mp4"}},
+	}
 
+	type args struct {
+		request domainSend.VideoRequest
+	}
+	tests := []struct {
+		name string
+		args args
+		err  any
+	}{
+		{
+			name: "should success with normal condition",
+			args: args{request: domainSend.VideoRequest{
+				BaseRequest: domainSend.BaseRequest{
+					Phone: "1728937129312@s.whatsapp.net",
+				},
+				Caption:  "simple caption",
+				Video:    file,
+				ViewOnce: false,
+				Compress: false,
+			}},
+			err: nil,
+		},
+		{
+			name: "should error with empty phone",
+			args: args{request: domainSend.VideoRequest{
+				BaseRequest: domainSend.BaseRequest{
+					Phone: "",
+				},
+				Caption:  "simple caption",
+				Video:    file,
+				ViewOnce: false,
+				Compress: false,
+			}},
+			err: pkgError.ValidationError("phone: cannot be blank."),
+		},
+		{
+			name: "should error with empty video",
+			args: args{request: domainSend.VideoRequest{
+				BaseRequest: domainSend.BaseRequest{
+					Phone: "1728937129312@s.whatsapp.net",
+				},
+				Caption:  "simple caption",
+				Video:    nil,
+				ViewOnce: false,
+				Compress: false,
+			}},
+			err: pkgError.ValidationError("either Video or VideoURL must be provided"),
+		},
+		{
+			name: "should error with invalid format video",
+			args: args{request: domainSend.VideoRequest{
+				BaseRequest: domainSend.BaseRequest{
+					Phone: "1728937129312@s.whatsapp.net",
+				},
+				Caption: "simple caption",
+				Video: func() *multipart.FileHeader {
+					return &multipart.FileHeader{
+						Filename: "sample-video.jpg",
+						Size:     100,
+						Header:   map[string][]string{"Content-Type": {"image/png"}},
+					}
+				}(),
+				ViewOnce: false,
+				Compress: false,
+			}},
+			err: pkgError.ValidationError("your video type is not allowed. please use mp4/mkv/avi/x-msvideo"),
+		},
+		{
+			name: "should error with empty video and video_url",
+			args: args{request: domainSend.VideoRequest{
+				BaseRequest: domainSend.BaseRequest{
+					Phone: "1728937129312@s.whatsapp.net",
+				},
+				Caption:  "simple caption",
+				Video:    nil,
+				VideoURL: func() *string { s := ""; return &s }(),
+				ViewOnce: false,
+				Compress: false,
+			}},
+			err: pkgError.ValidationError("either Video or VideoURL must be provided"),
+		},
+		{
+			name: "should success with video_url provided",
+			args: args{request: domainSend.VideoRequest{
+				BaseRequest: domainSend.BaseRequest{
+					Phone: "1728937129312@s.whatsapp.net",
+				},
+				Caption:  "simple caption",
+				Video:    nil,
+				VideoURL: func() *string { s := "https://example.com/sample.mp4"; return &s }(),
+				ViewOnce: false,
+				Compress: false,
+			}},
+			err: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateSendVideo(context.Background(), tt.args.request)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
 
 func TestValidateSendLink(t *testing.T) {
 	type args struct {
@@ -550,7 +659,7 @@ func TestValidateSendAudio(t *testing.T) {
 				},
 				Audio: nil,
 			}},
-			err: pkgError.ValidationError("either Audio, AudioURL or AudioPath must be provided"),
+			err: pkgError.ValidationError("either Audio or AudioURL must be provided"),
 		},
 		{
 			name: "should error with invalid audio type",
@@ -778,39 +887,34 @@ func TestValidateDuration(t *testing.T) {
 			err:      nil,
 		},
 		{
-			name:     "should success with zero duration (no expiry)",
+			name:     "should success with zero duration",
 			duration: func() *int { d := 0; return &d }(),
 			err:      nil,
 		},
 		{
-			name:     "should success with minimum valid duration (5 seconds)",
-			duration: func() *int { d := 5; return &d }(),
+			name:     "should success with 24h duration",
+			duration: func() *int { d := 86400; return &d }(),
 			err:      nil,
 		},
 		{
-			name:     "should success with maximum valid duration (90 days)",
+			name:     "should success with 7d duration",
+			duration: func() *int { d := 604800; return &d }(),
+			err:      nil,
+		},
+		{
+			name:     "should success with 90d duration",
 			duration: func() *int { d := 7776000; return &d }(),
 			err:      nil,
 		},
 		{
-			name:     "should success with a duration within the valid range",
-			duration: func() *int { d := 100; return &d }(),
-			err:      nil,
-		},
-		{
-			name:     "should error with duration less than 5 seconds (but not 0)",
-			duration: func() *int { d := 4; return &d }(),
-			err:      pkgError.ValidationError("duration must be 0 (no expiry) or between 5 seconds and 7776000 seconds (90 days)"),
-		},
-		{
-			name:     "should error with duration greater than 90 days",
-			duration: func() *int { d := 7776001; return &d }(),
-			err:      pkgError.ValidationError("duration must be 0 (no expiry) or between 5 seconds and 7776000 seconds (90 days)"),
+			name:     "should error with invalid duration",
+			duration: func() *int { d := 12345; return &d }(),
+			err:      pkgError.ValidationError("duration must be one of: 0 (no expiry), 86400 (24h), 604800 (7d), 7776000 (90d)"),
 		},
 		{
 			name:     "should error with negative duration",
 			duration: func() *int { d := -1; return &d }(),
-			err:      pkgError.ValidationError("duration must be 0 (no expiry) or between 5 seconds and 7776000 seconds (90 days)"),
+			err:      pkgError.ValidationError("duration must be one of: 0 (no expiry), 86400 (24h), 604800 (7d), 7776000 (90d)"),
 		},
 	}
 
@@ -832,7 +936,7 @@ func TestValidateSendMessage_WithDuration(t *testing.T) {
 		err  any
 	}{
 		{
-			name: "should success with valid duration (e.g., 86400s)",
+			name: "should success with valid duration",
 			args: args{request: domainSend.MessageRequest{
 				BaseRequest: domainSend.BaseRequest{
 					Phone:    "1728937129312@s.whatsapp.net",
@@ -843,37 +947,15 @@ func TestValidateSendMessage_WithDuration(t *testing.T) {
 			err: nil,
 		},
 		{
-			name: "should success with minimum valid duration (5s)",
+			name: "should error with invalid duration",
 			args: args{request: domainSend.MessageRequest{
 				BaseRequest: domainSend.BaseRequest{
 					Phone:    "1728937129312@s.whatsapp.net",
-					Duration: func() *int { d := 5; return &d }(),
+					Duration: func() *int { d := 12345; return &d }(),
 				},
 				Message: "Hello this is testing",
 			}},
-			err: nil,
-		},
-		{
-			name: "should error with invalid duration (e.g., 4s)",
-			args: args{request: domainSend.MessageRequest{
-				BaseRequest: domainSend.BaseRequest{
-					Phone:    "1728937129312@s.whatsapp.net",
-					Duration: func() *int { d := 4; return &d }(),
-				},
-				Message: "Hello this is testing",
-			}},
-			err: pkgError.ValidationError("duration must be 0 (no expiry) or between 5 seconds and 7776000 seconds (90 days)"),
-		},
-		{
-			name: "should error with invalid duration (e.g., greater than 90 days)",
-			args: args{request: domainSend.MessageRequest{
-				BaseRequest: domainSend.BaseRequest{
-					Phone:    "1728937129312@s.whatsapp.net",
-					Duration: func() *int { d := 7776001; return &d }(),
-				},
-				Message: "Hello this is testing",
-			}},
-			err: pkgError.ValidationError("duration must be 0 (no expiry) or between 5 seconds and 7776000 seconds (90 days)"),
+			err: pkgError.ValidationError("duration must be one of: 0 (no expiry), 86400 (24h), 604800 (7d), 7776000 (90d)"),
 		},
 	}
 
@@ -914,7 +996,7 @@ func TestValidateSendImage_WithImageURL(t *testing.T) {
 				Caption:  "Hello this is testing",
 				ImageURL: func() *string { s := ""; return &s }(),
 			}},
-			err: pkgError.ValidationError("either Image, ImageURL or ImagePath must be provided"),
+			err: pkgError.ValidationError("either Image or ImageURL must be provided"),
 		},
 	}
 
@@ -942,7 +1024,7 @@ func TestValidateSendFile_WithDuration(t *testing.T) {
 		err  any
 	}{
 		{
-			name: "should success with valid duration (e.g., 604800s)",
+			name: "should success with valid duration",
 			args: args{request: domainSend.FileRequest{
 				BaseRequest: domainSend.BaseRequest{
 					Phone:    "1728937129312@s.whatsapp.net",
@@ -953,37 +1035,15 @@ func TestValidateSendFile_WithDuration(t *testing.T) {
 			err: nil,
 		},
 		{
-			name: "should success with minimum valid duration (5s)",
+			name: "should error with invalid duration",
 			args: args{request: domainSend.FileRequest{
 				BaseRequest: domainSend.BaseRequest{
 					Phone:    "1728937129312@s.whatsapp.net",
-					Duration: func() *int { d := 5; return &d }(),
+					Duration: func() *int { d := 12345; return &d }(),
 				},
 				File: file,
 			}},
-			err: nil,
-		},
-		{
-			name: "should error with invalid duration (e.g., 4s)",
-			args: args{request: domainSend.FileRequest{
-				BaseRequest: domainSend.BaseRequest{
-					Phone:    "1728937129312@s.whatsapp.net",
-					Duration: func() *int { d := 4; return &d }(),
-				},
-				File: file,
-			}},
-			err: pkgError.ValidationError("duration must be 0 (no expiry) or between 5 seconds and 7776000 seconds (90 days)"),
-		},
-		{
-			name: "should error with invalid duration (e.g., greater than 90 days)",
-			args: args{request: domainSend.FileRequest{
-				BaseRequest: domainSend.BaseRequest{
-					Phone:    "1728937129312@s.whatsapp.net",
-					Duration: func() *int { d := 7776001; return &d }(),
-				},
-				File: file,
-			}},
-			err: pkgError.ValidationError("duration must be 0 (no expiry) or between 5 seconds and 7776000 seconds (90 days)"),
+			err: pkgError.ValidationError("duration must be one of: 0 (no expiry), 86400 (24h), 604800 (7d), 7776000 (90d)"),
 		},
 	}
 
@@ -1011,22 +1071,11 @@ func TestValidateSendAudio_WithDuration(t *testing.T) {
 		err  any
 	}{
 		{
-			name: "should success with valid duration (e.g., 7776000s) and audio file",
+			name: "should success with valid duration and audio file",
 			args: args{request: domainSend.AudioRequest{
 				BaseRequest: domainSend.BaseRequest{
 					Phone:    "1728937129312@s.whatsapp.net",
 					Duration: func() *int { d := 7776000; return &d }(),
-				},
-				Audio: audio,
-			}},
-			err: nil,
-		},
-		{
-			name: "should success with minimum valid duration (5s)",
-			args: args{request: domainSend.AudioRequest{
-				BaseRequest: domainSend.BaseRequest{
-					Phone:    "1728937129312@s.whatsapp.net",
-					Duration: func() *int { d := 5; return &d }(),
 				},
 				Audio: audio,
 			}},
@@ -1043,26 +1092,15 @@ func TestValidateSendAudio_WithDuration(t *testing.T) {
 			err: nil,
 		},
 		{
-			name: "should error with invalid duration (e.g., 4s)",
+			name: "should error with invalid duration",
 			args: args{request: domainSend.AudioRequest{
 				BaseRequest: domainSend.BaseRequest{
 					Phone:    "1728937129312@s.whatsapp.net",
-					Duration: func() *int { d := 4; return &d }(),
+					Duration: func() *int { d := 12345; return &d }(),
 				},
 				Audio: audio,
 			}},
-			err: pkgError.ValidationError("duration must be 0 (no expiry) or between 5 seconds and 7776000 seconds (90 days)"),
-		},
-		{
-			name: "should error with invalid duration (e.g., greater than 90 days)",
-			args: args{request: domainSend.AudioRequest{
-				BaseRequest: domainSend.BaseRequest{
-					Phone:    "1728937129312@s.whatsapp.net",
-					Duration: func() *int { d := 7776001; return &d }(),
-				},
-				Audio: audio,
-			}},
-			err: pkgError.ValidationError("duration must be 0 (no expiry) or between 5 seconds and 7776000 seconds (90 days)"),
+			err: pkgError.ValidationError("duration must be one of: 0 (no expiry), 86400 (24h), 604800 (7d), 7776000 (90d)"),
 		},
 	}
 

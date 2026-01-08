@@ -37,11 +37,10 @@ export default {
     },
     mounted() {
         this.recipientTypes = [
-            { value: window.TYPEUSER, text: 'Mensagem Privada' },
-            { value: window.TYPEGROUP, text: 'Mensagem Para Grupo' },
-            { value: window.TYPENEWSLETTER, text: 'Boletim Informativo' },
+            { value: window.TYPEUSER, text: 'Private Message' },
+            { value: window.TYPEGROUP, text: 'Group Message' },
+            { value: window.TYPENEWSLETTER, text: 'Newsletter' },
             { value: window.TYPESTATUS, text: 'Status' }
-
         ];
     },
     methods: {
@@ -57,14 +56,14 @@ export default {
     },
     template: `
     <div class="field">
-        <label>Tipo</label>
+        <label>Type</label>
         <select name="type" @change="updateType" class="ui dropdown">
             <option v-for="type in filteredRecipientTypes" :value="type.value">{{ type.text }}</option>
         </select>
     </div>
     
     <div v-if="showPhoneInput" class="field">
-        <label>Telefone / Grupo ID</label>
+        <label>Phone / Group ID</label>
         <input :value="phone" aria-label="wa identifier" @input="updatePhone">
         <input :value="phone_id" disabled aria-label="whatsapp_id">
     </div>

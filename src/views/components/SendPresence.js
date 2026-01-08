@@ -48,10 +48,10 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui blue right ribbon label">Enviar</a>
-            <div class="header">Enviar Presença</div>
+            <a class="ui blue right ribbon label">Send</a>
+            <div class="header">Send Presence</div>
             <div class="description">
-               Set <div class="ui green horizontal label">available</div> or <div class="ui grey horizontal label">unavailable</div>
+                Set <div class="ui green horizontal label">available</div> or <div class="ui grey horizontal label">unavailable</div>
             </div>
         </div>
     </div>
@@ -60,15 +60,15 @@ export default {
     <div class="ui small modal" id="modalSendPresence">
         <i class="close icon"></i>
         <div class="header">
-            Enviar Presença
+            Send Presence
         </div>
         <div class="content">
             <form class="ui form">
                 <div class="field">
-                    <label>Status de presença</label>
+                    <label>Presence Status</label>
                     <select v-model="type" class="ui dropdown">
-                        <option value="disponível">Available</option>
-                        <option value="indisponível">Unavailable</option>
+                        <option value="available">Available</option>
+                        <option value="unavailable">Unavailable</option>
                     </select>
                 </div>
             </form>
@@ -77,7 +77,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                  :class="{'loading': loading, 'disabled': loading}"
                  @click.prevent="handleSubmit">
-                Enviar
+                Send
                 <i class="send icon"></i>
             </button>
         </div>

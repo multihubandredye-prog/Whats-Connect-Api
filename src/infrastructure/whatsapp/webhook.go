@@ -28,14 +28,11 @@ func submitWebhook(ctx context.Context, payload map[string]any, url string) erro
 		Transport: transport,
 	}
 
-			buffer := new(bytes.Buffer)
-			encoder := json.NewEncoder(buffer)
-			encoder.SetEscapeHTML(false)
-			err := encoder.Encode(payload)
-			if err != nil {
-				return pkgError.WebhookError(fmt.Sprintf("Failed to marshal body: %v", err))
-			}
-			postBody := bytes.TrimRight(buffer.Bytes(), "\n")
+	postBody, err := json.Marshal(payload)
+	if err != nil {
+		return pkgError.WebhookError(fmt.Sprintf("Failed to marshal body: %v", err))
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		return pkgError.WebhookError(fmt.Sprintf("error when create http object %v", err))

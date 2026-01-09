@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-br">
 <head>
-    <!-- Required meta tags -->
+    <!-- Meta tags obrigatórias -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Bootstrap CSS -->
@@ -16,14 +16,14 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/axios@1.1.2/dist/axios.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-    <title>WhatsApp API {{ .AppVersion }}</title>
+    <title>API WhatsApp {{ .AppVersion }}</title>
 </head>
 <body>
 <div id="splash-screen">
-    <!-- Clean squircle logo without background wrapper -->
-    <img src="{{ .AppBasePath }}/assets/gowa.svg" alt="GoWA Logo" class="splash-icon" id="main-logo">
+    <!-- Logotipo limpo sem wrapper de fundo -->
+    <img src="{{ .AppBasePath }}/assets/gowa.svg" alt="Logotipo GoWA" class="splash-icon" id="main-logo">
     
-    <h2 class="splash-title">WhatsApp API</h2>
+    <h2 class="splash-title">API WhatsApp</h2>
     <div class="ui active large inline loader splash-spinner"></div>
 </div>
 
@@ -31,12 +31,12 @@
     <div class="main-header">
         <h1 class="ui header center aligned">
             <div class="title-container">
-                <img src="{{ .AppBasePath }}/assets/gowa.svg" alt="GoWA Logo">
+                <img src="{{ .AppBasePath }}/assets/gowa.svg" alt="Logotipo GoWA">
                 
-                <span>WhatsApp API</span>
+                <span>API WhatsApp</span>
                 
                 <div class="version-label">
-                    {{ .AppVersion }}
+                    Versão {{ .AppVersion }}
                 </div>
             </div>
         </h1>
@@ -45,11 +45,11 @@
     <div class="ui info message" v-if="selectedDeviceId">
         <div class="header">
             <i class="linkify icon"></i>
-            Device context active
+            Contexto do dispositivo ativo
         </div>
         <p>
-            Using device: <b>[[ selectedDeviceId ]]</b>.
-            REST/WebSocket send <code>X-Device-Id</code> (or <code>?device_id=</code> for WS).
+            Usando o dispositivo: <b>[[ selectedDeviceId ]]</b>.
+            Envie via REST/WebSocket com <code>X-Device-Id</code> (ou <code>?device_id=</code> para WS).
         </p>
     </div>
 
@@ -61,12 +61,12 @@
     </device-manager>
 
     <div class="ui horizontal divider">
-        App
+        Aplicativo
     </div>
 
     <div class="ui warning message" v-if="!selectedDeviceId">
-        <div class="header">Device required</div>
-        <p>Select or create a device above. Provide <code>X-Device-Id</code> on REST calls.</p>
+        <div class="header">Dispositivo necessário</div>
+        <p>Selecione ou crie um dispositivo acima. Forneça <code>X-Device-Id</code> nas chamadas REST.</p>
     </div>
 
     <div class="ui three column stackable grid cards" :class="{disabled: !selectedDeviceId}">
@@ -77,7 +77,7 @@
     </div>
 
     <div class="ui horizontal divider">
-        Send
+        Enviar
     </div>
 
     <div class="ui three column doubling grid cards">
@@ -100,7 +100,7 @@
     </div>
 
     <div class="ui horizontal divider">
-        Message
+        Mensagem
     </div>
 
     <div class="ui three column doubling grid cards">
@@ -112,7 +112,7 @@
     </div>
 
     <div class="ui horizontal divider">
-        Group
+        Grupo
     </div>
 
     <div class="ui three column doubling grid cards">
@@ -131,7 +131,7 @@
     </div>
 
     <div class="ui horizontal divider">
-        Newsletter
+        Boletim informativo
     </div>
 
     <div class="ui three column doubling grid cards">
@@ -139,7 +139,7 @@
     </div>
 
     <div class="ui horizontal divider">
-        Account
+        Conta
     </div>
 
     <div class="ui three column doubling grid cards">
@@ -154,7 +154,7 @@
     </div>
 
     <div class="ui horizontal divider">
-        Chat Management
+        Gerenciamento de Conversa
     </div>
 
     <div class="ui three column doubling grid cards">
@@ -173,7 +173,7 @@
     window.showErrorInfo = (message) => {
         $('body').toast({
             position: 'bottom right',
-            title: 'Error',
+            title: 'Erro',
             message: message,
             showProgress: 'bottom',
             classProgress: 'red'
@@ -182,7 +182,7 @@
     window.showSuccessInfo = (message) => {
         $('body').toast({
             position: 'bottom right',
-            title: 'Success',
+            title: 'Sucesso',
             message: message,
             showProgress: 'bottom',
             classProgress: 'green'
@@ -251,7 +251,7 @@
     const showErrorInfo = (message) => {
         $('body').toast({
             position: 'bottom right',
-            title: 'Error',
+            title: 'Erro',
             message: message,
             showProgress: 'bottom',
             classProgress: 'red'
@@ -260,7 +260,7 @@
     const showSuccessInfo = (message) => {
         $('body').toast({
             position: 'bottom right',
-            title: 'Success',
+            title: 'Sucesso',
             message: message,
             showProgress: 'bottom',
             classProgress: 'green'
@@ -357,10 +357,10 @@
                 };
 
                 this.app_ws.onerror = (error) => {
-                    console.error('WebSocket error:', error);
+                    console.error('Erro no WebSocket:', error);
                     // Only show error notification if the device is logged in
                     if (this.isSelectedDeviceLoggedIn) {
-                        showErrorInfo('Connection error occurred. Please refresh or re-select the device.');
+                        showErrorInfo('Ocorreu um erro de conexão. Atualize ou selecione novamente o dispositivo.');
                     }
                 };
 
@@ -368,7 +368,7 @@
                     const message = JSON.parse(evt.data)
                     switch (message.code) {
                         case 'LOGIN_SUCCESS':
-                            showSuccessInfo(message.message)
+                            showSuccessInfo('Sucesso no Login: ' + message.message)
                             $('#modalLogin').modal('hide');
 
                             // fetch devices
@@ -378,16 +378,16 @@
                             this.connected_devices = message.result
                             break;
                         case 'LOGOUT_COMPLETE':
-                            // Handle successful cleanup after remote logout
-                            showSuccessInfo('✅ ' + message.message)
-                            console.log('[LOGOUT_COMPLETE] Remote logout cleanup completed:', message)
-                            // Optionally refresh the device list
+                            // Tratar limpeza bem-sucedida após logout remoto
+                            showSuccessInfo('✅ Logout completo: ' + message.message)
+                            console.log('[LOGOUT_COMPLETE] Limpeza de logout remoto concluída:', message)
+                            // Opcionalmente, atualize a lista de dispositivos
                             this.handleReloadDevice()
                             break;
                         case 'DEVICE_REMOVED': {
                             const removedId = message.result?.device_id;
                             const devices = message.result?.devices;
-                            showSuccessInfo('✅ ' + (message.message || 'Device removed'));
+                            showSuccessInfo('✅ ' + (message.message || 'Dispositivo removido'));
 
                             if (Array.isArray(devices)) {
                                 this.deviceList = devices;
@@ -414,7 +414,7 @@
             },
         },
         mounted() {
-            // Show app container and hide splash once initial data fetched
+            // Exibir o contêiner do aplicativo e ocultar a tela de splash após os dados iniciais serem buscados
             setTimeout(() => {
                 document.getElementById('app').style.display = 'block';
                 document.getElementById('splash-screen').classList.add('fade-out');

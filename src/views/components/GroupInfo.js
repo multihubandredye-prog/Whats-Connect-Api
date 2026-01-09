@@ -35,10 +35,10 @@ export default {
             const hours = Math.floor((this.groupInfo.DisappearingTimer % (24 * 60 * 60)) / (60 * 60));
             const minutes = Math.floor((this.groupInfo.DisappearingTimer % (60 * 60)) / 60);
             
-            if (days > 0) return `${days} day${days > 1 ? 's' : ''}`;
-            if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''}`;
-            if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''}`;
-            return `${this.groupInfo.DisappearingTimer} second${this.groupInfo.DisappearingTimer > 1 ? 's' : ''}`;
+            if (days > 0) return `${days} dia${days > 1 ? 's' : ''}`;
+            if (hours > 0) return `${hours} hora${hours > 1 ? 's' : ''}`;
+            if (minutes > 0) return `${minutes} minuto${minutes > 1 ? 's' : ''}`;
+            return `${this.groupInfo.DisappearingTimer} segundo${this.groupInfo.DisappearingTimer > 1 ? 's' : ''}`;
         }
     },
     methods: {
@@ -53,7 +53,7 @@ export default {
             if (!this.isValidForm() || this.loading) return;
             try {
                 await this.fetchInfo();
-                showSuccessInfo('Group info fetched');
+                showSuccessInfo('Informações do grupo obtidas');
             } catch (err) {
                 showErrorInfo(err.message || err);
             }
@@ -84,9 +84,9 @@ export default {
             return phone.replace('@s.whatsapp.net', '');
         },
         getParticipantRole(participant) {
-            if (participant.IsSuperAdmin) return 'Super Admin';
-            if (participant.IsAdmin) return 'Admin';
-            return 'Member';
+            if (participant.IsSuperAdmin) return 'Super Administrador';
+            if (participant.IsAdmin) return 'Administrador';
+            return 'Membro';
         },
         getParticipantRoleColor(participant) {
             if (participant.IsSuperAdmin) return 'red';
@@ -97,10 +97,10 @@ export default {
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer;">
         <div class="content">
-            <a class="ui green right ribbon label">Group</a>
-            <div class="header">Group Info</div>
+            <a class="ui green right ribbon label">Grupo</a>
+            <div class="header">Informações do Grupo</div>
             <div class="description">
-                Search detailed information about a group by ID
+                Buscar informações detalhadas sobre um grupo por ID
             </div>
         </div>
     </div>
@@ -110,20 +110,20 @@ export default {
         <i class="close icon"></i>
         <div class="header">
             <i class="users icon"></i>
-            Group Information
+            Informações do Grupo
         </div>
         <div class="content">
             <form class="ui form">
                 <div class="field">
-                    <label>Group ID</label>
+                    <label>ID do Grupo</label>
                     <div class="ui action input">
-                        <input v-model="group_id" placeholder="e.g. 1203630...">
+                        <input v-model="group_id" placeholder="ex: 1203630...">
                         <button type="button" class="ui primary button" :class="{'loading': loading, 'disabled': !isValidForm() || loading}" @click.prevent="handleSubmit">
                             <i class="search icon"></i>
-                            Search
+                            Buscar
                         </button>
                     </div>
-                    <small class="ui grey text">Full ID: {{ fullGroupID }}</small>
+                    <small class="ui grey text">ID Completo: {{ fullGroupID }}</small>
                 </div>
             </form>
 
@@ -135,42 +135,42 @@ export default {
                             <h3 class="ui header">
                                 <i class="info circle icon"></i>
                                 <div class="content">
-                                    Basic Information
+                                    Informações Básicas
                                 </div>
                             </h3>
                             <div class="ui relaxed divided list">
                                 <div class="item">
                                     <i class="tag icon"></i>
                                     <div class="content">
-                                        <div class="header">Group Name</div>
-                                        <div class="description">{{ groupInfo.Name || 'No name' }}</div>
+                                        <div class="header">Nome do Grupo</div>
+                                        <div class="description">{{ groupInfo.Name || 'Sem nome' }}</div>
                                     </div>
                                 </div>
                                 <div class="item">
                                     <i class="id card icon"></i>
                                     <div class="content">
-                                        <div class="header">Group ID</div>
+                                        <div class="header">ID do Grupo</div>
                                         <div class="description">{{ groupInfo.JID }}</div>
                                     </div>
                                 </div>
                                 <div class="item">
                                     <i class="comment icon"></i>
                                     <div class="content">
-                                        <div class="header">Description</div>
-                                        <div class="description">{{ groupInfo.Topic || 'No description' }}</div>
+                                        <div class="header">Descrição</div>
+                                        <div class="description">{{ groupInfo.Topic || 'Sem descrição' }}</div>
                                     </div>
                                 </div>
                                 <div class="item">
                                     <i class="calendar icon"></i>
                                     <div class="content">
-                                        <div class="header">Created</div>
+                                        <div class="header">Criado</div>
                                         <div class="description">{{ formattedGroupCreated }}</div>
                                     </div>
                                 </div>
                                 <div class="item">
                                     <i class="flag icon"></i>
                                     <div class="content">
-                                        <div class="header">Creator Country</div>
+                                        <div class="header">País do Criador</div>
                                         <div class="description">{{ groupInfo.CreatorCountryCode }}</div>
                                     </div>
                                 </div>
@@ -184,35 +184,35 @@ export default {
                             <h3 class="ui header">
                                 <i class="settings icon"></i>
                                 <div class="content">
-                                    Group Settings
+                                    Configurações do Grupo
                                 </div>
                             </h3>
                             <div class="ui relaxed list">
                                 <div class="item">
                                     <div class="content">
-                                        <div class="header">Group Type</div>
+                                        <div class="header">Tipo de Grupo</div>
                                         <div class="ui labels">
                                             <div class="ui label" :class="groupInfo.IsLocked ? 'red' : 'green'">
                                                 <i class="lock icon" v-if="groupInfo.IsLocked"></i>
                                                 <i class="unlock icon" v-else></i>
-                                                {{ groupInfo.IsLocked ? 'Locked' : 'Unlocked' }}
+                                                {{ groupInfo.IsLocked ? 'Bloqueado' : 'Desbloqueado' }}
                                             </div>
                                             <div class="ui label" :class="groupInfo.IsAnnounce ? 'orange' : 'blue'">
                                                 <i class="bullhorn icon" v-if="groupInfo.IsAnnounce"></i>
                                                 <i class="comments icon" v-else></i>
-                                                {{ groupInfo.IsAnnounce ? 'Announcement' : 'Open Chat' }}
+                                                {{ groupInfo.IsAnnounce ? 'Anúncio' : 'Chat Aberto' }}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="item">
                                     <div class="content">
-                                        <div class="header">Privacy Settings</div>
+                                        <div class="header">Configurações de Privacidade</div>
                                         <div class="ui labels">
                                             <div class="ui label" :class="groupInfo.IsEphemeral ? 'purple' : 'grey'">
                                                 <i class="hourglass icon" v-if="groupInfo.IsEphemeral"></i>
                                                 <i class="save icon" v-else></i>
-                                                {{ groupInfo.IsEphemeral ? 'Disappearing Messages' : 'Persistent Messages' }}
+                                                {{ groupInfo.IsEphemeral ? 'Mensagens Temporárias' : 'Mensagens Persistentes' }}
                                             </div>
                                             <div v-if="groupInfo.IsEphemeral" class="ui purple label">
                                                 <i class="clock icon"></i>
@@ -223,12 +223,12 @@ export default {
                                 </div>
                                 <div class="item">
                                     <div class="content">
-                                        <div class="header">Join Settings</div>
+                                        <div class="header">Configurações de Entrada</div>
                                         <div class="ui labels">
                                             <div class="ui label" :class="groupInfo.IsJoinApprovalRequired ? 'red' : 'green'">
                                                 <i class="user check icon" v-if="groupInfo.IsJoinApprovalRequired"></i>
                                                 <i class="user plus icon" v-else></i>
-                                                {{ groupInfo.IsJoinApprovalRequired ? 'Approval Required' : 'Open Join' }}
+                                                {{ groupInfo.IsJoinApprovalRequired ? 'Aprovação Necessária' : 'Entrada Aberta' }}
                                             </div>
                                             <div class="ui label">
                                                 <i class="users icon"></i>
@@ -239,19 +239,19 @@ export default {
                                 </div>
                                 <div class="item">
                                     <div class="content">
-                                        <div class="header">Other Settings</div>
+                                        <div class="header">Outras Configurações</div>
                                         <div class="ui labels">
                                             <div v-if="groupInfo.IsIncognito" class="ui grey label">
                                                 <i class="user secret icon"></i>
-                                                Incognito
+                                                Anônimo
                                             </div>
                                             <div v-if="groupInfo.IsParent" class="ui teal label">
                                                 <i class="sitemap icon"></i>
-                                                Parent Group
+                                                Grupo Pai
                                             </div>
                                             <div v-if="groupInfo.IsDefaultSubGroup" class="ui olive label">
                                                 <i class="share icon"></i>
-                                                Default Sub Group
+                                                Subgrupo Padrão
                                             </div>
                                         </div>
                                     </div>
@@ -266,8 +266,8 @@ export default {
                     <h3 class="ui header">
                         <i class="users icon"></i>
                         <div class="content">
-                            Participants
-                            <div class="sub header">{{ groupInfo.Participants ? groupInfo.Participants.length : 0 }} members</div>
+                            Participantes
+                            <div class="sub header">{{ groupInfo.Participants ? groupInfo.Participants.length : 0 }} membros</div>
                         </div>
                     </h3>
                     <div class="ui relaxed divided list">
@@ -296,7 +296,7 @@ export default {
                     <h3 class="ui header">
                         <i class="info icon"></i>
                         <div class="content">
-                            Metadata
+                            Metadados
                         </div>
                     </h3>
                     <div class="ui two column stackable grid">
@@ -304,16 +304,16 @@ export default {
                             <div class="ui relaxed list">
                                 <div class="item">
                                     <div class="content">
-                                        <div class="header">Name Last Changed</div>
+                                        <div class="header">Nome Última Alteração</div>
                                         <div class="description">{{ formattedNameSetAt }}</div>
-                                        <div class="description">By: {{ formatPhoneNumber(groupInfo.NameSetBy) }}</div>
+                                        <div class="description">Por: {{ formatPhoneNumber(groupInfo.NameSetBy) }}</div>
                                     </div>
                                 </div>
                                 <div class="item">
                                     <div class="content">
-                                        <div class="header">Topic Last Changed</div>
+                                        <div class="header">Tópico Última Alteração</div>
                                         <div class="description">{{ formattedTopicSetAt }}</div>
-                                        <div class="description">By: {{ formatPhoneNumber(groupInfo.TopicSetBy) }}</div>
+                                        <div class="description">Por: {{ formatPhoneNumber(groupInfo.TopicSetBy) }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -322,19 +322,19 @@ export default {
                             <div class="ui relaxed list">
                                 <div class="item">
                                     <div class="content">
-                                        <div class="header">Owner</div>
+                                        <div class="header">Proprietário</div>
                                         <div class="description">{{ formatPhoneNumber(groupInfo.OwnerJID) }}</div>
                                     </div>
                                 </div>
                                 <div class="item">
                                     <div class="content">
-                                        <div class="header">Participant Version</div>
+                                        <div class="header">Versão do Participante</div>
                                         <div class="description">{{ groupInfo.ParticipantVersionID }}</div>
                                     </div>
                                 </div>
                                 <div class="item">
                                     <div class="content">
-                                        <div class="header">Announce Version</div>
+                                        <div class="header">Versão do Anúncio</div>
                                         <div class="description">{{ groupInfo.AnnounceVersionID }}</div>
                                     </div>
                                 </div>

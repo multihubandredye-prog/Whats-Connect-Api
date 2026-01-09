@@ -70,9 +70,9 @@ export default {
     <div class="purple card" @click="openModal()" style="cursor: pointer">
         <div class="content">
             <a class="ui purple right ribbon label">Chat</a>
-            <div class="header">Pin Chat</div>
+            <div class="header">Fixar Conversa</div>
             <div class="description">
-                Pin or unpin chats to the top of the list
+                Fixar ou desafixar conversas no topo da lista
             </div>
         </div>
     </div>
@@ -81,16 +81,16 @@ export default {
     <div class="ui small modal" id="modalChatPin">
         <i class="close icon"></i>
         <div class="header">
-            Pin Chat
+            Fixar Conversa
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone" :show-status="false"/>
                 <div class="field">
-                    <label>Action</label>
+                    <label>Ação</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="pinned" v-model="pinned">
-                        <label>Pin chat (uncheck to unpin)</label>
+                        <label>Fixar conversa (desmarque para desafixar)</label>
                     </div>
                 </div>
             </form>
@@ -99,7 +99,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                  :class="{'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                {{ pinned ? 'Pin Chat' : 'Unpin Chat' }}
+                {{ pinned ? 'Fixar Conversa' : 'Desafixar Conversa' }}
                 <i class="pin icon"></i>
             </button>
         </div>

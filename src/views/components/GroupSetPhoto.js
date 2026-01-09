@@ -91,10 +91,10 @@ export default {
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
-            <a class="ui green right ribbon label">Group</a>
-            <div class="header">Set Group Photo</div>
+            <a class="ui green right ribbon label">Grupo</a>
+            <div class="header">Definir Foto do Grupo</div>
             <div class="description">
-                Update or remove group profile picture
+                Atualizar ou remover imagem de perfil do grupo
             </div>
         </div>
     </div>
@@ -103,29 +103,29 @@ export default {
     <div class="ui small modal" id="modalGroupSetPhoto">
         <i class="close icon"></i>
         <div class="header">
-            Set Group Photo
+            Definir Foto do Grupo
         </div>
         <div class="content">
             <form class="ui form">
                 <div class="field">
-                    <label>Group ID</label>
+                    <label>ID do Grupo</label>
                     <input v-model="groupId" type="text"
                            placeholder="120363024512399999@g.us"
                            aria-label="Group ID">
                 </div>
                 
                 <div class="field">
-                    <label>Group Photo</label>
+                    <label>Foto do Grupo</label>
                     <input type="file" id="photoUpload" accept="image/*" @change="handleFileChange">
-                    <small class="text">Select a JPEG image for best results. Leave empty to remove current photo.</small>
+                    <small class="text">Selecione uma imagem JPEG para melhores resultados. Deixe em branco para remover a foto atual.</small>
                 </div>
                 
                 <div class="field" v-if="previewUrl">
-                    <label>Preview</label>
+                    <label>Pré-visualização</label>
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <img :src="previewUrl" alt="Preview" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;">
                         <button class="ui red button" @click="handleRemovePhoto" type="button">
-                            <i class="trash icon"></i> Remove
+                            <i class="trash icon"></i> Remover
                         </button>
                     </div>
                 </div>
@@ -135,7 +135,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                     :class="{'loading': this.loading, 'disabled': !this.isValidForm() || this.loading}"
                     @click.prevent="handleSubmit" type="button">
-                Update Photo
+                Atualizar Foto
                 <i class="camera icon"></i>
             </button>
         </div>

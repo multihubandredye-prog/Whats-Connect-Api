@@ -78,10 +78,10 @@ export default {
     template: `
     <div class="red card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui red right ribbon label">Message</a>
-            <div class="header">Update Message</div>
+            <a class="ui red right ribbon label">Mensagem</a>
+            <div class="header">Atualizar Mensagem</div>
             <div class="description">
-                Update your sent message
+                Atualize a mensagem que você enviou
             </div>
         </div>
     </div>
@@ -90,20 +90,20 @@ export default {
     <div class="ui small modal" id="modalMessageUpdate">
         <i class="close icon"></i>
         <div class="header">
-            Update Message
+            Atualizar Mensagem
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone"/>
                 
                 <div class="field">
-                    <label>Message ID</label>
-                    <input v-model="message_id" type="text" placeholder="Please enter your message id"
+                    <label>ID da Mensagem</label>
+                    <input v-model="message_id" type="text" placeholder="Por favor, insira o ID da sua mensagem"
                            aria-label="message id">
                 </div>
                 <div class="field">
-                    <label>New Message</label>
-                    <textarea v-model="new_message" type="text" placeholder="Hello this is your new message text, you can edit before 15 minutes after sent."
+                    <label>Nova Mensagem</label>
+                    <textarea v-model="new_message" type="text" placeholder="Olá, este é o seu novo texto de mensagem, você pode editá-lo antes de 15 minutos após o envio."
                               aria-label="message"></textarea>
                 </div>
             </form>
@@ -111,7 +111,7 @@ export default {
         <div class="actions">
             <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': !this.isValidForm() || this.loading}"
                  @click="handleSubmit">
-                Update
+                Atualizar
                 <i class="send icon"></i>
             </button>
         </div>

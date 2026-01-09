@@ -84,10 +84,10 @@ export default {
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
-            <a class="ui green right ribbon label">Group</a>
-            <div class="header">Create Groups</div>
+            <a class="ui green right ribbon label">Grupo</a>
+            <div class="header">Criar Grupos</div>
             <div class="description">
-                Add more friends to your group
+                Adicione mais pessoas ao seu grupo
             </div>
         </div>
     </div>
@@ -96,32 +96,32 @@ export default {
     <div class="ui small modal" id="modalGroupCreate">
         <i class="close icon"></i>
         <div class="header">
-            Create Group
+            Criar Grupo
         </div>
         <div class="content">
             <form class="ui form">
                 <div class="field">
-                    <label>Group Name</label>
+                    <label>Nome do Grupo</label>
                     <input v-model="title" type="text"
-                           placeholder="Group Name..."
+                           placeholder="Nome do Grupo..."
                            aria-label="Group Name">
                 </div>
                 
                 <div class="field">
-                    <label>Participants</label>
+                    <label>Participantes</label>
                     <div style="display: flex; flex-direction: column; gap: 5px">
                         <div class="ui action input" :key="index" v-for="(participant, index) in participants">
-                            <input type="number" placeholder="Phone Int Number (6289...)" v-model="participants[index]"
+                            <input type="number" placeholder="Número de Telefone Internacional (6289...)" v-model="participants[index]"
                                    aria-label="list participant">
                             <button class="ui button" @click="handleDeleteParticipant(index)" type="button">
                                 <i class="minus circle icon"></i>
                             </button>
                         </div>
                         <div class="field" style="display: flex; flex-direction: column; gap: 3px">
-                            <small>You do not need to include yourself as participant. it will be automatically included.</small>
+                            <small>Você não precisa se incluir como participante. Você será incluído automaticamente.</small>
                             <div>
                                 <button class="mini ui primary button" @click="handleAddParticipant" type="button">
-                                    <i class="plus icon"></i> Option
+                                    <i class="plus icon"></i> Adicionar Participante
                                 </button>
                             </div>
                         </div>
@@ -132,7 +132,7 @@ export default {
         <div class="actions">
             <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': !this.isValidForm() || this.loading}"
                  @click.prevent="handleSubmit" type="button">
-                Create
+                Criar
                 <i class="send icon"></i>
             </button>
         </div>

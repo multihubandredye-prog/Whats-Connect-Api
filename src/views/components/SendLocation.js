@@ -92,10 +92,10 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui blue right ribbon label">Send</a>
-            <div class="header">Send Location</div>
+            <a class="ui blue right ribbon label">Enviar</a>
+            <div class="header">Enviar Localização</div>
             <div class="description">
-                Send location to user or group
+                Enviar localização para usuário ou grupo
             </div>
         </div>
     </div>
@@ -104,39 +104,39 @@ export default {
     <div class="ui small modal" id="modalSendLocation">
         <i class="close icon"></i>
         <div class="header">
-            Send Location
+            Enviar Localização
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone"/>
                 
                 <div class="field">
-                    <label>Location Latitude</label>
-                    <input v-model="latitude" type="text" placeholder="Please enter latitude (-90 to 90)"
+                    <label>Latitude da Localização</label>
+                    <input v-model="latitude" type="text" placeholder="Por favor, insira a latitude (-90 a 90)"
                            aria-label="latitude">
                 </div>
                 <div class="field">
-                    <label>Location Longitude</label>
-                    <input v-model="longitude" type="text" placeholder="Please enter longitude (-180 to 180)"
+                    <label>Longitude da Localização</label>
+                    <input v-model="longitude" type="text" placeholder="Por favor, insira a longitude (-180 a 180)"
                            aria-label="longitude">
                 </div>
                 <div class="field" v-if="isShowAttributes()">
-                    <label>Is Forwarded</label>
+                    <label>É Encaminhada</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="is forwarded" v-model="is_forwarded">
-                        <label>Mark location as forwarded</label>
+                        <label>Marcar localização como encaminhada</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Disappearing Duration (seconds)</label>
-                    <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
+                    <label>Duração de Mensagem Temporária (segundos)</label>
+                    <input v-model.number="duration" type="number" min="0" placeholder="0 (sem expiração)" aria-label="duration"/>
                 </div>
             </form>
         </div>
         <div class="actions">
             <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading}" 
                  @click="handleSubmit" :disabled="!isValidForm">
-                Send
+                Enviar
                 <i class="send icon"></i>
             </button>
         </div>

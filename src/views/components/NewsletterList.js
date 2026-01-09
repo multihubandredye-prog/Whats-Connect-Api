@@ -12,7 +12,7 @@ export default {
                 await this.submitApi();
                 $('#modalNewsletterList').modal('show');
                 this.dtRebuild()
-                showSuccessInfo("Newsletters fetched")
+                showSuccessInfo("Boletins informativos obtidos")
             } catch (err) {
                 showErrorInfo(err)
             }
@@ -28,14 +28,14 @@ export default {
         },
         async handleUnfollowNewsletter(newsletter_id) {
             try {
-                const ok = confirm("Are you sure to leave this newsletter?");
+                const ok = confirm("Tem certeza que deseja sair deste boletim informativo?");
                 if (!ok) return;
 
                 await this.unfollowNewsletterApi(newsletter_id);
                 this.dtClear()
                 await this.submitApi();
                 this.dtRebuild()
-                showSuccessInfo("Success unfollow newsletter")
+                showSuccessInfo("Boletim informativo deixado com sucesso")
             } catch (err) {
                 showErrorInfo(err)
             }
@@ -67,17 +67,17 @@ export default {
         },
         formatDate: function (value) {
             if (!value) return ''
-            if (isNaN(value)) return 'Invalid date';
+            if (isNaN(value)) return 'Data inválida';
             return moment.unix(value).format('LLL');
         }
     },
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
-            <a class="ui green right ribbon label">Newsletter</a>
-            <div class="header">List Newsletters</div>
+            <a class="ui green right ribbon label">Boletim informativo</a>
+            <div class="header">Listar Boletins Informativos</div>
             <div class="description">
-                Display all your newsletters
+                Exibir todos os seus boletins informativos
             </div>
         </div>
     </div>
@@ -86,27 +86,27 @@ export default {
     <div class="ui small modal" id="modalNewsletterList">
         <i class="close icon"></i>
         <div class="header">
-            My Newsletter List
+            Minha Lista de Boletins Informativos
         </div>
         <div class="content">
             <table class="ui celled table" id="account_newsletters_table">
                 <thead>
                 <tr>
-                    <th>Newsletter ID</th>
-                    <th>Name</th>
-                    <th>Role</th>
-                    <th>Created At</th>
-                    <th>Action</th>
+                    <th>ID do Boletim Informativo</th>
+                    <th>Nome</th>
+                    <th>Função</th>
+                    <th>Criado Em</th>
+                    <th>Ação</th>
                 </tr>
                 </thead>
                 <tbody v-if="newsletters != null">
                 <tr v-for="n in newsletters">
                     <td>{{ n.id.split('@')[0] }}</td>
-                    <td>{{ n.thread_metadata?.name?.text || 'N/A' }}</td>
-                    <td>{{ n.viewer_metadata?.role || 'N/A' }}</td>
+                    <td>{{ n.thread_metadata?.name?.text || 'N/D' }}</td>
+                    <td>{{ n.viewer_metadata?.role || 'N/D' }}</td>
                     <td>{{ formatDate(n.thread_metadata?.creation_time) }}</td>
                     <td>
-                        <button class="ui red tiny button" @click="handleUnfollowNewsletter(n.id)">Unfollow</button>
+                        <button class="ui red tiny button" @click="handleUnfollowNewsletter(n.id)">Deixar de Seguir</button>
                     </td>
                 </tr>
                 </tbody>

@@ -32,7 +32,7 @@ export default {
             }
             try {
                 await this.submitApi();
-                showSuccessInfo("Check completed")
+                showSuccessInfo("Verificação concluída")
             } catch (err) {
                 showErrorInfo(err)
             }
@@ -60,10 +60,10 @@ export default {
     template: `
     <div class="olive card" @click="openModal" style="cursor: pointer;">
         <div class="content">
-            <a class="ui olive right ribbon label">Account</a>
-            <div class="header">User Check</div>
+            <a class="ui olive right ribbon label">Conta</a>
+            <div class="header">Verificar Usuário</div>
             <div class="description">
-                Check if a user is on WhatsApp
+                Verificar se um usuário está no WhatsApp
             </div>
         </div>
     </div>
@@ -71,23 +71,23 @@ export default {
     <div class="ui small modal" id="modalUserCheck">
         <i class="close icon"></i>
         <div class="header">
-            Check if User is on WhatsApp
+            Verificar se o Usuário está no WhatsApp
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone"/>
                 <button type="button" class="ui primary button" :class="{'loading': loading, 'disabled': !this.isValidForm() || this.loading}"
                         @click.prevent="handleSubmit">
-                    Check
+                    Verificar
                 </button>
             </form>
 
             <div v-if="isOnWhatsApp !== null" class="ui message" :class="isOnWhatsApp ? 'positive' : 'negative'">
                 <div class="header">
                     <i :class="isOnWhatsApp ? 'check circle icon' : 'times circle icon'"></i>
-                    {{ isOnWhatsApp ? 'User is on WhatsApp' : 'User is not on WhatsApp' }}
+                    {{ isOnWhatsApp ? 'Usuário está no WhatsApp' : 'Usuário não está no WhatsApp' }}
                 </div>
-                <p>Phone: {{ phone_id }}</p>
+                <p>Telefone: {{ phone_id }}</p>
             </div>
         </div>
     </div>

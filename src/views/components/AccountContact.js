@@ -12,7 +12,7 @@ export default {
                 await this.submitApi();
                 $('#modalContactList').modal('show');
                 this.dtRebuild()
-                showSuccessInfo("Contacts fetched")
+                showSuccessInfo("Contatos obtidos")
             } catch (err) {
                 showErrorInfo(err)
             }
@@ -42,12 +42,12 @@ export default {
         },
         exportToCSV() {
             if (!this.contacts || this.contacts.length === 0) {
-                showErrorInfo("No contacts to export");
+                showErrorInfo("Nenhum contato para exportar");
                 return;
             }
             
             // Create CSV content with headers
-            let csvContent = "Phone Number,Name\n";
+            let csvContent = "Número de Telefone,Nome\n";
             
             // Add each contact as a row
             this.contacts.forEach(contact => {
@@ -70,16 +70,16 @@ export default {
             link.click();
             document.body.removeChild(link);
             
-            showSuccessInfo("Contacts exported to CSV");
+            showSuccessInfo("Contatos exportados para CSV");
         }
     },
     template: `
     <div class="olive card" @click="openModal" style="cursor: pointer">
         <div class="content">
-            <a class="ui olive right ribbon label">Contacts</a>
-            <div class="header">My Contacts</div>
+            <a class="ui olive right ribbon label">Contatos</a>
+            <div class="header">Meus Contatos</div>
             <div class="description">
-                Display all your contacts
+                Exibir todos os seus contatos
             </div>
         </div>
     </div>
@@ -88,17 +88,17 @@ export default {
     <div class="ui large modal" id="modalContactList">
         <i class="close icon"></i>
         <div class="header">
-            My Contacts
+            Meus Contatos
             <button class="ui green right floated button" @click="exportToCSV">
-                <i class="download icon"></i> Export to CSV
+                <i class="download icon"></i> Exportar para CSV
             </button>
         </div>
         <div class="content">
             <table class="ui celled table" id="account_contacts_table">
                 <thead>
                 <tr>
-                    <th>Phone Number</th>
-                    <th>Name</th>
+                    <th>Número de Telefone</th>
+                    <th>Nome</th>
                 </tr>
                 </thead>
                 <tbody v-if="contacts != null">

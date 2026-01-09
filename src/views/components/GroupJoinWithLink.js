@@ -64,10 +64,10 @@ export default {
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
-            <a class="ui green right ribbon label">Group</a>
-            <div class="header">Join Groups</div>
+            <a class="ui green right ribbon label">Grupo</a>
+            <div class="header">Entrar em Grupos</div>
             <div class="description">
-                Join group with invitation link
+                Entrar em grupo com link de convite
             </div>
         </div>
     </div>
@@ -76,22 +76,22 @@ export default {
     <div class="ui small modal" id="modalGroupJoinWithLink">
         <i class="close icon"></i>
         <div class="header">
-            Join Group With Link
+            Entrar em Grupo com Link
         </div>
         <div class="content">
             <form class="ui form">
                 <div class="field">
-                    <label>Invitation Link</label>
+                    <label>Link de Convite</label>
                     <input v-model="link" type="text"
-                           placeholder="Invitation link..."
-                           aria-label="Invitation Link">
+                           placeholder="Link de convite..."
+                           aria-label="Link de Convite">
                 </div>
             </form>
         </div>
         <div class="actions">
             <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': !this.isValidForm() || this.loading}"
                  @click.prevent="handleSubmit" type="button">
-                Join
+                Entrar
                 <i class="send icon"></i>
             </button>
         </div>

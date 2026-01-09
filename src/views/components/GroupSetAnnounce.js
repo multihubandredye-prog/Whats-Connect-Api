@@ -56,10 +56,10 @@ export default {
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
-            <a class="ui green right ribbon label">Group</a>
-            <div class="header">Set Group Announce</div>
+            <a class="ui green right ribbon label">Grupo</a>
+            <div class="header">Definir Anúncio do Grupo</div>
             <div class="description">
-                Enable/disable announce mode for admins only messaging
+                Habilitar/desabilitar modo de anúncio para mensagens apenas de administradores
             </div>
         </div>
     </div>
@@ -68,28 +68,28 @@ export default {
     <div class="ui small modal" id="modalGroupSetAnnounce">
         <i class="close icon"></i>
         <div class="header">
-            Set Group Announce Mode
+            Definir Modo de Anúncio do Grupo
         </div>
         <div class="content">
             <form class="ui form">
                 <div class="field">
-                    <label>Group ID</label>
+                    <label>ID do Grupo</label>
                     <input v-model="groupId" type="text"
                            placeholder="120363024512399999@g.us"
                            aria-label="Group ID">
                 </div>
                 
                 <div class="field">
-                    <label>Announce Mode</label>
+                    <label>Modo Anúncio</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" v-model="announce">
-                        <label>{{ announce ? 'Enable announce mode (only admins can send messages)' : 'Disable announce mode (all members can send messages)' }}</label>
+                        <label>{{ announce ? 'Ativar modo anúncio (apenas administradores podem enviar mensagens)' : 'Desativar modo anúncio (todos os membros podem enviar mensagens)' }}</label>
                     </div>
                     <div class="ui info message" style="margin-top: 10px;">
-                        <div class="header">What does this do?</div>
+                        <div class="header">O que isso faz?</div>
                         <ul class="list">
-                            <li><strong>Announce Mode ON:</strong> Only group admins can send messages to the group</li>
-                            <li><strong>Announce Mode OFF:</strong> All group members can send messages</li>
+                            <li><strong>Modo Anúncio LIGADO:</strong> Apenas administradores do grupo podem enviar mensagens para o grupo</li>
+                            <li><strong>Modo Anúncio DESLIGADO:</strong> Todos os membros do grupo podem enviar mensagens</li>
                         </ul>
                     </div>
                 </div>
@@ -99,7 +99,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                     :class="{'loading': this.loading, 'disabled': !this.isValidForm() || this.loading}"
                     @click.prevent="handleSubmit" type="button">
-                {{ announce ? 'Enable Announce Mode' : 'Disable Announce Mode' }}
+                {{ announce ? 'Ativar Modo Anúncio' : 'Desativar Modo Anúncio' }}
                 <i :class="announce ? 'bullhorn icon' : 'comment icon'"></i>
             </button>
         </div>

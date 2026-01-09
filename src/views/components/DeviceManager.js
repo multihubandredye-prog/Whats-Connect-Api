@@ -42,12 +42,12 @@ export default {
         },
         setDeviceContext(id) {
             if (!id) {
-                showErrorInfo('Device ID is required');
+                showErrorInfo('ID do Dispositivo é obrigatório');
                 return;
             }
             this.selectedDeviceId = id;
             this.$emit('device-selected', id);
-            showSuccessInfo(`Using device ${id}`);
+            showSuccessInfo(`Usando o dispositivo ${id}`);
         },
         async createDevice() {
             try {
@@ -58,7 +58,7 @@ export default {
                 this.setDeviceContext(deviceID);
                 this.deviceIdInput = '';
             } catch (err) {
-                const msg = err.response?.data?.message || err.message || 'Failed to create device';
+                const msg = err.response?.data?.message || err.message || 'Falha ao criar dispositivo';
                 showErrorInfo(msg);
             } finally {
                 this.isCreatingDevice = false;
@@ -66,7 +66,7 @@ export default {
         },
         useDeviceFromInput() {
             if (!this.deviceIdInput) {
-                showErrorInfo('Enter a device_id or create one first.');
+                showErrorInfo('Insira um device_id ou crie um primeiro.');
                 return;
             }
             this.setDeviceContext(this.deviceIdInput);
@@ -92,7 +92,7 @@ export default {
         async executeDelete() {
             const deviceId = this.deviceToDelete.id;
             if (!deviceId) {
-                showErrorInfo('No device selected for deletion');
+                showErrorInfo('Nenhum dispositivo selecionado para exclusão');
                 return;
             }
             try {
@@ -104,7 +104,7 @@ export default {
                 }).catch(() => {});
                 
                 await window.http.delete(`/devices/${encodeURIComponent(deviceId)}`);
-                showSuccessInfo(`Device ${deviceId} deleted successfully`);
+                showSuccessInfo(`Dispositivo ${deviceId} excluído com sucesso`);
                 $('#deleteDeviceModal').modal('hide');
                 
                 if (this.selectedDeviceId === deviceId) {
@@ -115,7 +115,7 @@ export default {
                 await this.fetchDevices();
                 this.resetDeleteState();
             } catch (err) {
-                const msg = err.response?.data?.message || err.message || 'Failed to delete device';
+                const msg = err.response?.data?.message || err.message || 'Falha ao excluir dispositivo';
                 showErrorInfo(msg);
                 this.isDeleting = false;
             }
@@ -142,24 +142,24 @@ export default {
                 <h3 class="ui header">
                     <i class="play icon"></i>
                     <div class="content">
-                        Device setup
-                        <div class="sub header">Create or select a device_id, then open login.</div>
+                        Configuração do Dispositivo
+                        <div class="sub header">Crie ou selecione um device_id e, em seguida, abra o login.</div>
                     </div>
                 </h3>
                 <div class="ui form">
                     <div class="two fields">
                         <div class="field">
-                            <label>Device ID (optional)</label>
-                            <input type="text" v-model="deviceIdInput" placeholder="Leave empty to auto-generate">
+                            <label>ID do Dispositivo (opcional)</label>
+                            <input type="text" v-model="deviceIdInput" placeholder="Deixe vazio para gerar automaticamente">
                         </div>
                         <div class="field">
-                            <label>Actions</label>
+                            <label>Ações</label>
                             <div class="ui buttons">
                                 <button class="ui primary button" :class="{loading: isCreatingDevice}" @click="createDevice">
-                                    Create device
+                                    Criar dispositivo
                                 </button>
                                 <div class="or"></div>
-                                <button class="ui button" @click="useDeviceFromInput">Use this device</button>
+                                <button class="ui button" @click="useDeviceFromInput">Usar este dispositivo</button>
                             </div>
                         </div>
                     </div>
@@ -173,7 +173,7 @@ export default {
                         <div class="content">
                             <div class="header">{{ dev.id || dev.device }}</div>
                             <div class="description">
-                                <span>State: {{ dev.state || 'unknown' }}</span>
+                                <span>Estado: {{ dev.state || 'desconhecido' }}</span>
                                 <span v-if="dev.jid"> · JID: {{ dev.jid }}</span>
                             </div>
                         </div>
@@ -181,7 +181,7 @@ export default {
                             <button class="ui mini button" 
                                     :class="{active: selectedDeviceId === (dev.id || dev.device)}"
                                     @click="setDeviceContext(dev.id || dev.device)">
-                                {{ selectedDeviceId === (dev.id || dev.device) ? 'Selected' : 'Use' }}
+                                {{ selectedDeviceId === (dev.id || dev.device) ? 'Selecionado' : 'Usar' }}
                             </button>
                             <button class="ui mini red icon button" 
                                     @click="openDeleteModal(dev.id || dev.device, dev.jid)" 
@@ -192,18 +192,18 @@ export default {
                     </div>
                 </div>
                 <div class="ui message" v-else>
-                    No devices yet. Create one to begin.
+                    Nenhum dispositivo ainda. Crie um para começar.
                 </div>
             </div>
         </div>
         <div class="six wide column">
             <div class="ui warning message">
-                <div class="header">How to log in</div>
+                <div class="header">Como fazer login</div>
                 <ul class="list">
-                    <li>Step 1: Create a device to get <code>device_id</code>.</li>
-                    <li>Step 2: Send <code>X-Device-Id: device_id</code> on REST calls.</li>
-                    <li>Step 3: Open Login card to pair (QR or code).</li>
-                    <li>WebSocket URL: <code>{{ wsBasePath }}/ws?device_id=&lt;device_id&gt;</code></li>
+                    <li>Passo 1: Crie um dispositivo para obter o <code>device_id</code>.</li>
+                    <li>Passo 2: Envie <code>X-Device-Id: device_id</code> nas chamadas REST.</li>
+                    <li>Passo 3: Abra o cartão de Login para emparelhar (QR ou código).</li>
+                    <li>URL do WebSocket: <code>{{ wsBasePath }}/ws?device_id=&lt;device_id&gt;</code></li>
                 </ul>
             </div>
         </div>
@@ -212,24 +212,24 @@ export default {
         <div class="ui small modal" id="deleteDeviceModal">
             <div class="header">
                 <i class="trash alternate icon"></i>
-                Confirm Delete Device
+                Confirmar Exclusão do Dispositivo
             </div>
             <div class="content">
-                <p>Are you sure you want to delete this device?</p>
+                <p>Tem certeza de que deseja excluir este dispositivo?</p>
                 <div class="ui segment">
-                    <p><strong>Device ID:</strong> <code>{{ deviceToDelete.id }}</code></p>
+                    <p><strong>ID do Dispositivo:</strong> <code>{{ deviceToDelete.id }}</code></p>
                     <p v-if="deviceToDelete.jid"><strong>JID:</strong> <code>{{ deviceToDelete.jid }}</code></p>
                 </div>
                 <div class="ui warning message">
-                    <div class="header">Warning</div>
-                    <p>This action will permanently delete the device and all associated data including chats and messages. This cannot be undone.</p>
+                    <div class="header">Aviso</div>
+                    <p>Esta ação excluirá permanentemente o dispositivo e todos os dados associados, incluindo chats e mensagens. Esta ação não pode ser desfeita.</p>
                 </div>
             </div>
             <div class="actions">
-                <button class="ui cancel button">Cancel</button>
+                <button class="ui cancel button">Cancelar</button>
                 <button class="ui red approve button" :class="{loading: isDeleting}">
                     <i class="trash icon"></i>
-                    Delete Device
+                    Excluir Dispositivo
                 </button>
             </div>
         </div>

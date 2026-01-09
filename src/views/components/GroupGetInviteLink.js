@@ -42,9 +42,9 @@ export default {
             try {
                 await this.getInviteLink();
                 if (this.inviteLink) {
-                    showSuccessInfo('Group invite link fetched successfully!');
+                    showSuccessInfo('Link de convite do grupo obtido com sucesso!');
                 } else {
-                    showErrorInfo('No invite link received from the server');
+                    showErrorInfo('Nenhum link de convite recebido do servidor');
                 }
             } catch (err) {
                 showErrorInfo(err.message || err);
@@ -93,7 +93,7 @@ export default {
                     // Try modern clipboard API first
                     if (navigator.clipboard && navigator.clipboard.writeText) {
                         await navigator.clipboard.writeText(this.inviteLink);
-                        showSuccessInfo('✅ Invite link copied to clipboard!');
+                        showSuccessInfo('✅ Link de convite copiado para a área de transferência!');
                     } else {
                         // Fallback for older browsers
                         this.fallbackCopyToClipboard();
@@ -101,11 +101,9 @@ export default {
                 } catch (err) {
                     console.error('Clipboard API failed:', err);
                     this.fallbackCopyToClipboard();
-                } finally {
-                    this.copying = false;
                 }
             } else {
-                showErrorInfo('No invite link to copy');
+                showErrorInfo('Nenhum link de convite para copiar');
             }
         },
         fallbackCopyToClipboard() {
@@ -125,13 +123,13 @@ export default {
                 document.body.removeChild(tempInput);
                 
                 if (successful) {
-                    showSuccessInfo('✅ Invite link copied to clipboard!');
+                    showSuccessInfo('✅ Link de convite copiado para a área de transferência!');
                 } else {
-                    showErrorInfo('❌ Failed to copy. Please select and copy manually.');
+                    showErrorInfo('❌ Falha ao copiar. Por favor, selecione e copie manualmente.');
                 }
             } catch (err) {
                 console.error('Fallback copy failed:', err);
-                showErrorInfo('❌ Failed to copy. Please select and copy manually.');
+                showErrorInfo('❌ Falha ao copiar. Por favor, selecione e copie manualmente.');
             }
         },
         closeModal() {
@@ -149,10 +147,10 @@ export default {
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer;">
         <div class="content">
-            <a class="ui green right ribbon label">Group</a>
-            <div class="header">Get Group Invite Link</div>
+            <a class="ui green right ribbon label">Grupo</a>
+            <div class="header">Obter Link de Convite do Grupo</div>
             <div class="description">
-                Get invite link for a group
+                Obter link de convite para um grupo
             </div>
         </div>
     </div>
@@ -162,28 +160,28 @@ export default {
         <i class="close icon"></i>
         <div class="header">
             <i class="linkify icon"></i>
-            Get Group Invite Link
+            Obter Link de Convite do Grupo
         </div>
         <div class="content">
             <form class="ui form">
                 <div class="field">
-                    <label>Group ID</label>
+                    <label>ID do Grupo</label>
                     <input type="text" v-model="group_id" 
-                           placeholder="Enter group ID (e.g., 120363419080717833)"
+                           placeholder="Insira o ID do grupo (ex: 120363419080717833)"
                            @blur="handleGroupIDInput"
                            @input="handleGroupIDInput">
                     <div class="ui tiny info message">
                         <i class="info circle icon"></i>
                         <div class="content">
-                            <p>You can enter just the numbers (e.g., 120363419080717833) - the @g.us suffix will be added automatically.</p>
+                            <p>Você pode inserir apenas os números (ex: 120363419080717833) - o sufixo @g.us será adicionado automaticamente.</p>
                         </div>
                     </div>
                     <div v-if="group_id && displayGroupID !== group_id" class="ui info message">
                         <i class="info circle icon"></i>
                         <div class="content">
-                            <div class="header">Auto-corrected Group ID</div>
-                            <p>Your input: <code>{{ group_id }}</code></p>
-                            <p>Will use: <code>{{ displayGroupID }}</code></p>
+                            <div class="header">ID do Grupo Corrigido Automaticamente</div>
+                            <p>Sua entrada: <code>{{ group_id }}</code></p>
+                            <p>Será usado: <code>{{ displayGroupID }}</code></p>
                         </div>
                     </div>
                 </div>
@@ -191,14 +189,14 @@ export default {
                 <div class="field">
                     <div class="ui checkbox">
                         <input type="checkbox" v-model="resetLink" id="resetInviteLink">
-                        <label for="resetInviteLink">Reset invite link (revoke old link)</label>
+                        <label for="resetInviteLink">Redefinir link de convite (revogar link antigo)</label>
                     </div>
                 </div>
 
                 <div class="ui divider"></div>
 
                 <div v-if="inviteLink" class="field">
-                    <label>Invite Link</label>
+                    <label>Link de Convite</label>
                     <div class="ui action input">
                         <input type="text" :value="inviteLink" readonly 
                                style="font-family: monospace; background-color: #f8f9fa; cursor: text;"
@@ -206,15 +204,15 @@ export default {
                                @focus="$event.target.select()">
                         <button type="button" class="ui blue button" @click="copyToClipboard" :class="{'loading': copying}">
                             <i class="copy icon"></i>
-                            <span v-if="copying">Copying...</span>
-                            <span v-else>Copy</span>
+                            <span v-if="copying">Copiando...</span>
+                            <span v-else>Copiar</span>
                         </button>
                     </div>
                     <div class="ui info message">
                         <i class="info circle icon"></i>
                         <div class="content">
-                            <div class="header">Invite Link Generated</div>
-                            <p>Share this link with others to invite them to the group.</p>
+                            <div class="header">Link de Convite Gerado</div>
+                            <p>Compartilhe este link com outras pessoas para convidá-las para o grupo.</p>
                         </div>
                     </div>
                 </div>
@@ -224,14 +222,14 @@ export default {
                 <button type="button" class="ui approve positive right labeled icon button" 
                         :class="{'loading': loading, 'disabled': !isValidForm || loading}"
                         @click.prevent="handleSubmit">
-                    <span v-if="loading">Fetching...</span>
-                    <span v-else>Get Invite Link</span>
+                    <span v-if="loading">Buscando...</span>
+                    <span v-else>Obter Link de Convite</span>
                     <i class="linkify icon"></i>
                 </button>
             </form>
         </div>
         <div class="actions">
-            <div class="ui approve button" @click="closeModal">Close</div>
+            <div class="ui approve button" @click="closeModal">Fechar</div>
         </div>
     </div>
     `

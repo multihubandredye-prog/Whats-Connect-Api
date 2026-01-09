@@ -56,10 +56,10 @@ export default {
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
-            <a class="ui green right ribbon label">Group</a>
-            <div class="header">Set Group Locked</div>
+            <a class="ui green right ribbon label">Grupo</a>
+            <div class="header">Definir Bloqueio do Grupo</div>
             <div class="description">
-                Lock/unlock group info editing for admins only
+                Bloquear/desbloquear edição de informações do grupo apenas para administradores
             </div>
         </div>
     </div>
@@ -68,28 +68,28 @@ export default {
     <div class="ui small modal" id="modalGroupSetLocked">
         <i class="close icon"></i>
         <div class="header">
-            Set Group Locked Status
+            Definir Status de Bloqueio do Grupo
         </div>
         <div class="content">
             <form class="ui form">
                 <div class="field">
-                    <label>Group ID</label>
+                    <label>ID do Grupo</label>
                     <input v-model="groupId" type="text"
                            placeholder="120363024512399999@g.us"
                            aria-label="Group ID">
                 </div>
                 
                 <div class="field">
-                    <label>Lock Status</label>
+                    <label>Status de Bloqueio</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" v-model="locked">
-                        <label>{{ locked ? 'Lock group (only admins can edit group info)' : 'Unlock group (all members can edit group info)' }}</label>
+                        <label>{{ locked ? 'Bloquear grupo (apenas administradores podem editar informações do grupo)' : 'Desbloquear grupo (todos os membros podem editar informações do grupo)' }}</label>
                     </div>
                     <div class="ui info message" style="margin-top: 10px;">
-                        <div class="header">What does this do?</div>
+                        <div class="header">O que isso faz?</div>
                         <ul class="list">
-                            <li><strong>Locked:</strong> Only group admins can change group name, description, and photo</li>
-                            <li><strong>Unlocked:</strong> All group members can change group info</li>
+                            <li><strong>Bloqueado:</strong> Apenas administradores do grupo podem alterar nome, descrição e foto do grupo</li>
+                            <li><strong>Desbloqueado:</strong> Todos os membros do grupo podem alterar informações do grupo</li>
                         </ul>
                     </div>
                 </div>
@@ -99,7 +99,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                     :class="{'loading': this.loading, 'disabled': !this.isValidForm() || this.loading}"
                     @click.prevent="handleSubmit" type="button">
-                {{ locked ? 'Lock Group' : 'Unlock Group' }}
+                {{ locked ? 'Bloquear Grupo' : 'Desbloquear Grupo' }}
                 <i :class="locked ? 'lock icon' : 'unlock icon'"></i>
             </button>
         </div>

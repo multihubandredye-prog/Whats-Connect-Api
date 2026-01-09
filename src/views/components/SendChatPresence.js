@@ -60,10 +60,10 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui blue right ribbon label">Send</a>
-            <div class="header">Send Chat Presence</div>
+            <a class="ui blue right ribbon label">Enviar</a>
+            <div class="header">Enviar Presença no Chat</div>
             <div class="description">
-                Send <div class="ui green horizontal label">typing</div> indicators to specific chat
+                Enviar indicadores de digitação para um chat específico
             </div>
         </div>
     </div>
@@ -72,16 +72,17 @@ export default {
     <div class="ui small modal" id="modalSendChatPresence">
         <i class="close icon"></i>
         <div class="header">
-            Send Chat Presence
+            Enviar Presença no Chat
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone" />
                 <div class="field">
-                    <label>Action</label>
+                    <label>Ação</label>
                     <select v-model="action" class="ui dropdown">
-                        <option value="start">Start Typing</option>
-                        <option value="stop">Stop Typing</option>
+                        <option value="start">Começar a Digitar</option>
+                        <option value="stop">Parar de Digitar</option>
+                        <option value="recording">Gravando</option>
                     </select>
                 </div>
             </form>
@@ -90,7 +91,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                  :class="{'loading': loading, 'disabled': loading}"
                  @click.prevent="handleSubmit">
-                Send
+                Enviar
                 <i class="send icon"></i>
             </button>
         </div>

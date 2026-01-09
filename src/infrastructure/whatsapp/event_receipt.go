@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/pollstore"
 	"github.com/sirupsen/logrus"
 	"go.mau.fi/whatsmeow"
@@ -42,38 +43,51 @@ func createReceiptPayload(ctx context.Context, evt *events.Receipt, deviceID str
 
 	// Add message IDs
 	if len(evt.MessageIDs) > 0 {
-		payload["ids"] = evt.MessageIDs
+		payload["IDs"] = evt.MessageIDs
 
 		// Enrich with original message data if it's a poll
 		if pollData, found := pollstore.DefaultPollStore.GetPoll(evt.MessageIDs[0]); found {
-			payload["poll"] = map[string]any{
-				"question": pollData.Question,
-				"options":  pollData.Options,
+			payload["Poll"] = map[string]any{
+				"Question": pollData.Question,
+				"Options":  pollData.Options,
 			}
 		}
 	}
 
 	// Add chat_id
-	payload["chat_id"] = evt.Chat.ToNonAD().String()
+	payload["Chat_ID"] = evt.Chat.ToNonAD().String()
 
 	// Build from/from_lid fields from sender
 	senderJID := evt.Sender
 
 	if senderJID.Server == "lid" {
-		payload["from_lid"] = senderJID.ToNonAD().String()
+		payload["From_LID"] = senderJID.ToNonAD().String()
 	}
 
 	// Resolve sender JID (convert LID to phone number if needed)
 	normalizedSenderJID := NormalizeJIDFromLID(ctx, senderJID, client)
-	payload["from"] = normalizedSenderJID.ToNonAD().String()
+	payload["Sender_Number"] = normalizedSenderJID.ToNonAD().String()
 
 	// Receipt type
 	if evt.Type == types.ReceiptTypeDelivered {
-		payload["receipt_type"] = "delivered"
+		payload["Receipt_Type"] = "delivered"
 	} else {
-		payload["receipt_type"] = string(evt.Type)
+		payload["Receipt_Type"] = string(evt.Type)
 	}
-	payload["receipt_type_description"] = getReceiptTypeDescription(evt.Type)
+	payload["Receipt_Type_Description"] = getReceiptTypeDescription(evt.Type)
+	payload["Port"] = config.AppPort
+	payload["From_Me"] = evt.IsFromMe
+
+	// Determine and add Type field
+	if len(evt.MessageIDs) > 0 { // Check if MessageIDs is not empty before trying to access index 0
+		if _, found := pollstore.DefaultPollStore.GetPoll(evt.MessageIDs[0]); found {
+			payload["Type"] = "poll_message"
+		} else {
+			payload["Type"] = "receipt_message"
+		}
+	} else {
+		payload["Type"] = "receipt_message"
+	}
 
 	// Wrap in body structure
 	body["event"] = "message.ack"

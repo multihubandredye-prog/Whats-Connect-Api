@@ -42,7 +42,7 @@ export default {
 
             try {
                 await this.submitApi();
-                showSuccessInfo("Info fetched")
+                showSuccessInfo("Informações obtidas")
             } catch (err) {
                 showErrorInfo(err)
             }
@@ -74,10 +74,10 @@ export default {
     template: `
     <div class="olive card" @click="openModal" style="cursor: pointer;">
         <div class="content">
-        <a class="ui olive right ribbon label">Account</a>
-            <div class="header">User Info</div>
+        <a class="ui olive right ribbon label">Conta</a>
+            <div class="header">Informações do Usuário</div>
             <div class="description">
-                You can search someone user info by phone
+                Você pode buscar informações de usuário pelo telefone
             </div>
         </div>
     </div>
@@ -87,7 +87,7 @@ export default {
     <div class="ui small modal" id="modalUserInfo">
         <i class="close icon"></i>
         <div class="header">
-            Search User Information
+            Buscar Informações do Usuário
         </div>
         <div class="content">
             <form class="ui form">
@@ -95,15 +95,15 @@ export default {
 
                 <button type="button" class="ui primary button" :class="{'loading': loading, 'disabled': !this.isValidForm() || this.loading}"
                         @click.prevent="handleSubmit">
-                    Search
+                    Buscar
                 </button>
             </form>
 
             <div v-if="devices.length > 0" class="center">
                 <ol>
-                    <li>Name: {{ name }}</li>
+                    <li>Nome: {{ name }}</li>
                     <li>Status: {{ status }}</li>
-                    <li>Device:
+                    <li>Dispositivo:
                         <ul>
                             <li v-for="d in devices">
                                 {{ d.Device }}

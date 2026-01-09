@@ -5,14 +5,19 @@ import (
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
 	"github.com/gofiber/fiber/v2"
+	"github.com/go-playground/validator/v10"
 )
 
 type Send struct {
 	Service domainSend.ISendUsecase
+	Validator *validator.Validate
 }
 
 func InitRestSend(app fiber.Router, service domainSend.ISendUsecase) Send {
-	rest := Send{Service: service}
+	rest := Send{
+        Service: service,
+        Validator: validator.New(),
+    }
 	app.Post("/send/message", rest.SendText)
 	app.Post("/send/image", rest.SendImage)
 	app.Post("/send/file", rest.SendFile)
@@ -25,6 +30,12 @@ func InitRestSend(app fiber.Router, service domainSend.ISendUsecase) Send {
 	app.Post("/send/poll", rest.SendPoll)
 	app.Post("/send/presence", rest.SendPresence)
 	app.Post("/send/chat-presence", rest.SendChatPresence)
+
+	jsonGroup := app.Group("/send/json")
+	jsonGroup.Post("/image", rest.SendImageJSON)
+	jsonGroup.Post("/video", rest.SendVideoJSON)
+	jsonGroup.Post("/audio", rest.SendAudioJSON)
+	jsonGroup.Post("/file", rest.SendFileJSON)
 	return rest
 }
 
@@ -32,6 +43,9 @@ func (controller *Send) SendText(c *fiber.Ctx) error {
 	var request domainSend.MessageRequest
 	err := c.BodyParser(&request)
 	utils.PanicIfNeeded(err)
+
+    err = controller.Validator.Struct(&request)
+    utils.PanicIfNeeded(err)
 
 	utils.SanitizePhone(&request.Phone)
 
@@ -52,6 +66,9 @@ func (controller *Send) SendImage(c *fiber.Ctx) error {
 
 	err := c.BodyParser(&request)
 	utils.PanicIfNeeded(err)
+
+    err = controller.Validator.Struct(&request)
+    utils.PanicIfNeeded(err)
 
 	file, err := c.FormFile("image")
 	if err == nil {
@@ -76,6 +93,9 @@ func (controller *Send) SendFile(c *fiber.Ctx) error {
 	err := c.BodyParser(&request)
 	utils.PanicIfNeeded(err)
 
+    err = controller.Validator.Struct(&request)
+    utils.PanicIfNeeded(err)
+
 	file, err := c.FormFile("file")
 	utils.PanicIfNeeded(err)
 
@@ -97,6 +117,9 @@ func (controller *Send) SendVideo(c *fiber.Ctx) error {
 	var request domainSend.VideoRequest
 	err := c.BodyParser(&request)
 	utils.PanicIfNeeded(err)
+
+    err = controller.Validator.Struct(&request)
+    utils.PanicIfNeeded(err)
 
 	// Try to get file but ignore error if not provided
 	if videoFile, errFile := c.FormFile("video"); errFile == nil {
@@ -120,6 +143,9 @@ func (controller *Send) SendSticker(c *fiber.Ctx) error {
 	var request domainSend.StickerRequest
 	err := c.BodyParser(&request)
 	utils.PanicIfNeeded(err)
+
+    err = controller.Validator.Struct(&request)
+    utils.PanicIfNeeded(err)
 
 	// Try to get file but ignore error if not provided
 	if stickerFile, errFile := c.FormFile("sticker"); errFile == nil {
@@ -258,6 +284,80 @@ func (controller *Send) SendChatPresence(c *fiber.Ctx) error {
 	utils.SanitizePhone(&request.Phone)
 
 	response, err := controller.Service.SendChatPresence(whatsapp.ContextWithDevice(c.UserContext(), getDeviceFromCtx(c)), request)
+	utils.PanicIfNeeded(err)
+
+	return c.JSON(utils.ResponseData{
+		Status:  200,
+		Code:    "SUCCESS",
+		Message: response.Status,
+		Results: response,
+	})
+}
+
+// --- JSON Send Endpoints ---
+
+func (controller *Send) SendImageJSON(c *fiber.Ctx) error {
+	var request domainSend.ImageRequest
+	err := c.BodyParser(&request)
+	utils.PanicIfNeeded(err)
+
+	utils.SanitizePhone(&request.Phone)
+
+	response, err := controller.Service.SendImage(whatsapp.ContextWithDevice(c.UserContext(), getDeviceFromCtx(c)), request)
+	utils.PanicIfNeeded(err)
+
+	return c.JSON(utils.ResponseData{
+		Status:  200,
+		Code:    "SUCCESS",
+		Message: response.Status,
+		Results: response,
+	})
+}
+
+func (controller *Send) SendVideoJSON(c *fiber.Ctx) error {
+	var request domainSend.VideoRequest
+	err := c.BodyParser(&request)
+	utils.PanicIfNeeded(err)
+
+	utils.SanitizePhone(&request.Phone)
+
+	response, err := controller.Service.SendVideo(whatsapp.ContextWithDevice(c.UserContext(), getDeviceFromCtx(c)), request)
+	utils.PanicIfNeeded(err)
+
+	return c.JSON(utils.ResponseData{
+		Status:  200,
+		Code:    "SUCCESS",
+		Message: response.Status,
+		Results: response,
+	})
+}
+
+func (controller *Send) SendAudioJSON(c *fiber.Ctx) error {
+	var request domainSend.AudioRequest
+	err := c.BodyParser(&request)
+	utils.PanicIfNeeded(err)
+
+	utils.SanitizePhone(&request.Phone)
+
+	response, err := controller.Service.SendAudio(whatsapp.ContextWithDevice(c.UserContext(), getDeviceFromCtx(c)), request)
+	utils.PanicIfNeeded(err)
+
+	return c.JSON(utils.ResponseData{
+		Status:  200,
+		Code:    "SUCCESS",
+		Message: response.Status,
+		Results: response,
+	})
+}
+
+func (controller *Send) SendFileJSON(c *fiber.Ctx) error {
+	var request domainSend.FileRequest
+	err := c.BodyParser(&request)
+	utils.PanicIfNeeded(err)
+
+	utils.SanitizePhone(&request.Phone)
+
+	response, err := controller.Service.SendFile(whatsapp.ContextWithDevice(c.UserContext(), getDeviceFromCtx(c)), request)
 	utils.PanicIfNeeded(err)
 
 	return c.JSON(utils.ResponseData{

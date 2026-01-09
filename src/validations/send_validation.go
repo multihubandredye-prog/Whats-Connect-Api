@@ -13,28 +13,24 @@ import (
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 )
 
-// ValidDurationValues contains WhatsApp's allowed disappearing message durations in seconds.
-// 0 = no expiry/disabled, 86400 = 24 hours, 604800 = 7 days, 7776000 = 90 days.
-var ValidDurationValues = []int{
-	0,       // No expiry / disabled
-	86400,   // 24 hours
-	604800,  // 7 days
-	7776000, // 90 days
-}
-
-// validateDuration validates that the duration pointer is nil or one of WhatsApp's standard values.
+// validateDuration validates that the duration is one of WhatsApp's allowed disappearing message durations in seconds.
 func validateDuration(dur *int) error {
 	if dur == nil {
 		return nil
 	}
-	for _, valid := range ValidDurationValues {
-		if *dur == valid {
-			return nil
-		}
+
+	allowedDurations := map[int]bool{
+		0:       true, // no expiry
+		86400:   true, // 24 hours
+		604800:  true, // 7 days
+		7776000: true, // 90 days
 	}
-	return pkgError.ValidationError(
-		"duration must be one of: 0 (no expiry), 86400 (24h), 604800 (7d), 7776000 (90d)",
-	)
+
+	if _, ok := allowedDurations[*dur]; ok {
+		return nil
+	}
+
+	return pkgError.ValidationError("Duração inválida. Os valores permitidos são 0 (desativado), 86400 (24 horas), 604800 (7 dias), ou 7776000 (90 dias)")
 }
 
 // validatePhoneNumber validates that the phone number is in international format (not starting with 0)
@@ -105,11 +101,19 @@ func ValidateSendImage(ctx context.Context, request domainSend.ImageRequest) err
 		return err
 	}
 
-	if request.Image == nil && (request.ImageURL == nil || *request.ImageURL == "") {
-		return pkgError.ValidationError("either Image or ImageURL must be provided")
+	// Ensure exactly one of Image, ImageURL, or ImagePath is provided
+	hasImageFile := request.Image != nil
+	hasImageURL := request.ImageURL != nil && *request.ImageURL != ""
+	hasImagePath := request.ImagePath != nil && *request.ImagePath != ""
+
+	if !hasImageFile && !hasImageURL && !hasImagePath {
+		return pkgError.ValidationError("either Image (file), ImageURL, or ImagePath (base64) must be provided")
+	}
+	if (hasImageFile && hasImageURL) || (hasImageFile && hasImagePath) || (hasImageURL && hasImagePath) {
+		return pkgError.ValidationError("only one of Image (file), ImageURL, or ImagePath (base64) can be provided")
 	}
 
-	if request.Image != nil {
+	if hasImageFile {
 		availableMimes := map[string]bool{
 			"image/jpeg": true,
 			"image/jpg":  true,
@@ -121,11 +125,7 @@ func ValidateSendImage(ctx context.Context, request domainSend.ImageRequest) err
 		}
 	}
 
-	if request.ImageURL != nil {
-		if *request.ImageURL == "" {
-			return pkgError.ValidationError("ImageURL cannot be empty")
-		}
-
+	if hasImageURL {
 		err := validation.Validate(*request.ImageURL, is.URL)
 		if err != nil {
 			return pkgError.ValidationError("ImageURL must be a valid URL")
@@ -198,7 +198,6 @@ func ValidateSendSticker(ctx context.Context, request domainSend.StickerRequest)
 func ValidateSendFile(ctx context.Context, request domainSend.FileRequest) error {
 	err := validation.ValidateStructWithContext(ctx, &request,
 		validation.Field(&request.Phone, validation.Required),
-		validation.Field(&request.File, validation.Required),
 	)
 
 	if err != nil {
@@ -210,9 +209,30 @@ func ValidateSendFile(ctx context.Context, request domainSend.FileRequest) error
 		return err
 	}
 
-	if request.File.Size > config.WhatsappSettingMaxFileSize { // 10MB
-		maxSizeString := humanize.Bytes(uint64(config.WhatsappSettingMaxFileSize))
-		return pkgError.ValidationError(fmt.Sprintf("max file upload is %s, please upload in cloud and send via text if your file is higher than %s", maxSizeString, maxSizeString))
+	// Ensure exactly one of File (multipart), FileURL, or FilePath (base64) is provided
+	hasFileMultipart := request.File != nil
+	hasFileURL := request.FileURL != nil && *request.FileURL != ""
+	hasFilePath := request.FilePath != nil && *request.FilePath != ""
+
+	if !hasFileMultipart && !hasFileURL && !hasFilePath {
+		return pkgError.ValidationError("either File (multipart), FileURL, or FilePath (base64) must be provided")
+	}
+	if (hasFileMultipart && hasFileURL) || (hasFileMultipart && hasFilePath) || (hasFileURL && hasFilePath) {
+		return pkgError.ValidationError("only one of File (multipart), FileURL, or FilePath (base64) can be provided")
+	}
+
+	if hasFileMultipart {
+		if request.File.Size > config.WhatsappSettingMaxFileSize { // 10MB
+			maxSizeString := humanize.Bytes(uint64(config.WhatsappSettingMaxFileSize))
+			return pkgError.ValidationError(fmt.Sprintf("max file upload is %s, please upload in cloud and send via text if your file is higher than %s", maxSizeString, maxSizeString))
+		}
+	}
+
+	if hasFileURL {
+		err := validation.Validate(*request.FileURL, is.URL)
+		if err != nil {
+			return pkgError.ValidationError("FileURL must be a valid URL")
+		}
 	}
 
 	if err := validateDuration(request.Duration); err != nil {
@@ -237,13 +257,20 @@ func ValidateSendVideo(ctx context.Context, request domainSend.VideoRequest) err
 		return err
 	}
 
-	// Ensure at least one of Video or VideoURL is provided
-	if request.Video == nil && (request.VideoURL == nil || *request.VideoURL == "") {
-		return pkgError.ValidationError("either Video or VideoURL must be provided")
+	// Ensure exactly one of Video (multipart), VideoURL, or VideoPath (base64) is provided
+	hasVideoFile := request.Video != nil
+	hasVideoURL := request.VideoURL != nil && *request.VideoURL != ""
+	hasVideoPath := request.VideoPath != nil && *request.VideoPath != ""
+
+	if !hasVideoFile && !hasVideoURL && !hasVideoPath {
+		return pkgError.ValidationError("either Video (file), VideoURL, or VideoPath (base64) must be provided")
+	}
+	if (hasVideoFile && hasVideoURL) || (hasVideoFile && hasVideoPath) || (hasVideoURL && hasVideoPath) {
+		return pkgError.ValidationError("only one of Video (file), VideoURL, or VideoPath (base64) can be provided")
 	}
 
 	// If Video file provided perform MIME / size validation
-	if request.Video != nil {
+	if hasVideoFile {
 		availableMimes := map[string]bool{
 			"video/mp4":        true,
 			"video/x-matroska": true,
@@ -262,11 +289,7 @@ func ValidateSendVideo(ctx context.Context, request domainSend.VideoRequest) err
 	}
 
 	// If VideoURL provided, validate url
-	if request.VideoURL != nil {
-		if *request.VideoURL == "" {
-			return pkgError.ValidationError("VideoURL cannot be empty")
-		}
-
+	if hasVideoURL {
 		if err := validation.Validate(*request.VideoURL, is.URL); err != nil {
 			return pkgError.ValidationError("VideoURL must be a valid URL")
 		}
@@ -367,13 +390,20 @@ func ValidateSendAudio(ctx context.Context, request domainSend.AudioRequest) err
 		return err
 	}
 
-	// Ensure at least one of Audio or AudioURL is provided
-	if request.Audio == nil && (request.AudioURL == nil || *request.AudioURL == "") {
-		return pkgError.ValidationError("either Audio or AudioURL must be provided")
+	// Ensure exactly one of Audio (multipart), AudioURL, or AudioPath (base64) is provided
+	hasAudioFile := request.Audio != nil
+	hasAudioURL := request.AudioURL != nil && *request.AudioURL != ""
+	hasAudioPath := request.AudioPath != nil && *request.AudioPath != ""
+
+	if !hasAudioFile && !hasAudioURL && !hasAudioPath {
+		return pkgError.ValidationError("either Audio (file), AudioURL, or AudioPath (base64) must be provided")
+	}
+	if (hasAudioFile && hasAudioURL) || (hasAudioFile && hasAudioPath) || (hasAudioURL && hasAudioPath) {
+		return pkgError.ValidationError("only one of Audio (file), AudioURL, or AudioPath (base64) can be provided")
 	}
 
 	// If Audio file is provided, validate file MIME
-	if request.Audio != nil {
+	if hasAudioFile {
 		availableMimes := map[string]bool{
 			"audio/aac":      true,
 			"audio/amr":      true,
@@ -411,7 +441,7 @@ func ValidateSendAudio(ctx context.Context, request domainSend.AudioRequest) err
 	}
 
 	// If AudioURL provided, basic URL validation
-	if request.AudioURL != nil {
+	if hasAudioURL {
 		if *request.AudioURL == "" {
 			return pkgError.ValidationError("AudioURL cannot be empty")
 		}
@@ -485,7 +515,7 @@ func ValidateSendPresence(ctx context.Context, request domainSend.PresenceReques
 func ValidateSendChatPresence(ctx context.Context, request domainSend.ChatPresenceRequest) error {
 	err := validation.ValidateStructWithContext(ctx, &request,
 		validation.Field(&request.Phone, validation.Required),
-		validation.Field(&request.Action, validation.Required, validation.In("start", "stop")),
+		validation.Field(&request.Action, validation.Required, validation.In("start", "stop", "recording")),
 	)
 
 	if err != nil {

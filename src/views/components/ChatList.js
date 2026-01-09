@@ -52,7 +52,7 @@ export default {
                 this.chats = response.data.results?.data || [];
                 this.totalChats = response.data.results?.pagination?.total || 0;
             } catch (error) {
-                showErrorInfo(error.response?.data?.message || 'Failed to load chats');
+                showErrorInfo(error.response?.data?.message || 'Falha ao carregar conversas');
             } finally {
                 this.loading = false;
             }
@@ -90,14 +90,14 @@ export default {
             }, 200);
         },
         formatTimestamp(timestamp) {
-            if (!timestamp) return 'N/A';
+            if (!timestamp) return 'N/D';
             return moment(timestamp).format('MMM DD, YYYY HH:mm');
         },
         formatJid(jid) {
             if (!jid) return '';
-            if (jid.includes('@g.us')) return 'Group';
-            if (jid.includes('@s.whatsapp.net')) return 'Contact';
-            return 'Other';
+            if (jid.includes('@g.us')) return 'Grupo';
+            if (jid.includes('@s.whatsapp.net')) return 'Contato';
+            return 'Outro';
         }
     },
     mounted() {
@@ -114,9 +114,9 @@ export default {
     <div class="purple card" @click="openModal()" style="cursor: pointer">
         <div class="content">
             <a class="ui purple right ribbon label">Chat</a>
-            <div class="header">Chat List</div>
+            <div class="header">Lista de Conversas</div>
             <div class="description">
-                View all chats with search and pagination
+                Ver todas as conversas com busca e paginação
             </div>
         </div>
     </div>
@@ -126,16 +126,16 @@ export default {
         <i class="close icon"></i>
         <div class="header">
             <i class="comments icon"></i>
-            Chat List
+            Lista de Conversas
         </div>
         <div class="content">
             <div class="ui form">
                 <div class="fields">
                     <div class="twelve wide field">
-                        <label>Search Chats</label>
+                        <label>Buscar Conversas</label>
                         <div class="ui icon input">
                             <input type="text" 
-                                   placeholder="Search by name or JID..." 
+                                   placeholder="Buscar por nome ou JID..." 
                                    v-model="searchQuery"
                                    @input="searchChats">
                             <i class="search icon"></i>
@@ -145,7 +145,7 @@ export default {
                         <label>&nbsp;</label>
                         <div class="ui checkbox">
                             <input type="checkbox" v-model="includeMediaChats" @change="searchChats">
-                            <label>Media chats only</label>
+                            <label>Apenas conversas de mídia</label>
                         </div>
                     </div>
                 </div>
@@ -158,7 +158,7 @@ export default {
             <div v-else-if="filteredChats.length === 0" class="ui placeholder segment">
                 <div class="ui icon header">
                     <i class="comments outline icon"></i>
-                    No chats found
+                    Nenhuma conversa encontrada
                 </div>
             </div>
             
@@ -166,11 +166,11 @@ export default {
                 <table class="ui celled striped table">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Type</th>
+                            <th>Nome</th>
+                            <th>Tipo</th>
                             <th>JID</th>
-                            <th>Last Message</th>
-                            <th>Actions</th>
+                            <th>Última Mensagem</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -178,7 +178,7 @@ export default {
                             <td>
                                 <div class="ui header">
                                     <div class="content">
-                                        {{ chat.name || 'Unknown' }}
+                                        {{ chat.name || 'Desconhecido' }}
                                     </div>
                                 </div>
                             </td>
@@ -197,7 +197,7 @@ export default {
                                 <button class="ui small primary button" 
                                         @click="selectChat(chat.jid)">
                                     <i class="eye icon"></i>
-                                    View Messages
+                                    Ver Mensagens
                                 </button>
                             </td>
                         </tr>
@@ -210,7 +210,7 @@ export default {
                         <i class="left chevron icon"></i>
                     </a>
                     <div class="item">
-                        Page {{ currentPage }} of {{ totalPages }}
+                        Página {{ currentPage }} de {{ totalPages }}
                     </div>
                     <a class="icon item" @click="nextPage" :class="{ disabled: currentPage === totalPages }">
                         <i class="right chevron icon"></i>
@@ -219,7 +219,7 @@ export default {
             </div>
         </div>
         <div class="actions">
-            <div class="ui approve button">Close</div>
+            <div class="ui approve button">Fechar</div>
         </div>
     </div>
     `

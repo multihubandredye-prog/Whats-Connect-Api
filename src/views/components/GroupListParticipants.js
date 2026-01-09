@@ -11,7 +11,7 @@ export default {
     methods: {
         async open(group) {
             if (!group || !group.JID) {
-                throw new Error('Invalid group data');
+                throw new Error('Dados do grupo inválidos');
             }
 
             this.selectedGroup = {
@@ -37,7 +37,7 @@ export default {
                 if (error.response && error.response.data && error.response.data.message) {
                     throw new Error(error.response.data.message);
                 }
-                throw new Error(error.message || 'Failed to fetch participants');
+                throw new Error(error.message || 'Falha ao buscar participantes');
             }
         },
         close() {
@@ -68,10 +68,10 @@ export default {
             return this.formatJID(participant.jid);
         },
         getParticipantRole(participant) {
-            if (!participant) return 'Member';
-            if (participant.is_super_admin) return 'Super Admin';
-            if (participant.is_admin) return 'Admin';
-            return 'Member';
+            if (!participant) return 'Membro';
+            if (participant.is_super_admin) return 'Super Administrador';
+            if (participant.is_admin) return 'Administrador';
+            return 'Membro';
         },
         getParticipantRoleColor(participant) {
             if (!participant) return 'grey';
@@ -94,24 +94,24 @@ export default {
     <div class="ui modal" ref="modal">
         <i class="close icon"></i>
         <div class="header">
-            Group Participants
+            Participantes do Grupo
             <div class="sub header" v-if="selectedGroup && selectedGroup.name">{{ selectedGroup.name }}</div>
         </div>
         <div class="content">
             <div v-if="loading" class="ui active centered inline loader"></div>
 
             <div v-else-if="!participants.length" class="ui info message">
-                <div class="header">No Participants Found</div>
-                <p>Unable to retrieve participants for this group.</p>
+                <div class="header">Nenhum Participante Encontrado</div>
+                <p>Não foi possível recuperar os participantes para este grupo.</p>
             </div>
 
             <table v-else class="ui celled table">
                 <thead>
                     <tr>
-                        <th>Participant</th>
-                        <th>Phone Number</th>
+                        <th>Participante</th>
+                        <th>Número de Telefone</th>
                         <th>LID</th>
-                        <th>Role</th>
+                        <th>Função</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -137,7 +137,7 @@ export default {
             </table>
         </div>
         <div class="actions">
-            <div class="ui button" @click="close">Close</div>
+            <div class="ui button" @click="close">Fechar</div>
         </div>
     </div>
     `,

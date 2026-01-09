@@ -16,7 +16,7 @@ export default {
     methods: {
         async openModal() {
             try {
-                if (this.loggedIn) throw Error('You are already logged in.');
+                if (this.loggedIn) throw Error('Você já está logado.');
 
                 $('#modalLoginWithCode').modal({
                     onApprove: function() {
@@ -52,42 +52,42 @@ export default {
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
             <a class="ui teal right ribbon label">App</a>
-            <div class="header">Login with Code</div>
+            <div class="header">Entrar com Código</div>
             <div class="description">
-                Enter your pairing code to log in and access your devices.
+                Insira seu código de pareamento para entrar e acessar seus dispositivos.
             </div>
         </div>
     </div>
     
-    <!--  Modal Login  -->
+    <!-- Modal de Login  -->
     <div class="ui small modal" id="modalLoginWithCode">
         <i class="close icon"></i>
         <div class="header">
-            Getting Pair Code
+            Obtendo Código de Pareamento
         </div>
         <div class="content">
             <div class="ui message info">
-                <div class="header">How to pair?</div>
+                <div class="header">Como parear?</div>
                 <ol>
-                    <li>Open your Whatsapp</li>
-                    <li>Link a device</li>
-                    <li>Link with pair code</li>
+                    <li>Abra seu Whatsapp</li>
+                    <li>Conectar um aparelho</li>
+                    <li>Conectar com código de pareamento</li>
                 </ol>
             </div>
             
             <div class="ui form">
                 <div class="field">
-                    <label>Phone</label>
-                    <input type="text" v-model="phone" placeholder="Type your phone number"
+                    <label>Telefone</label>
+                    <input type="text" v-model="phone" placeholder="Digite seu número de telefone"
                         @keyup.enter="handleSubmit" :disabled="submitting">
-                    <small>Enter to submit</small>
+                    <small>Pressione Enter para enviar</small>
                 </div>
             </div>
             
             <div class="ui grid" v-if="pair_code">
                 <div class="ui two column centered grid">
                     <div class="column center aligned">
-                        <div class="header">Pair Code</div>
+                        <div class="header">Código de Pareamento</div>
                         <p style="font-size: 32px">{{ pair_code }}</p>
                         
                     </div>

@@ -71,6 +71,12 @@ export default {
                 }
             }
 
+            // Validate duration if not view_once
+            if (!this.view_once && this.duration !== 0 && (this.duration < 86400 || this.duration > 7776000)) {
+                showErrorInfo("Duração inválida. Use 0 para sem expiração, ou entre 24 horas (86400s) e 90 dias (7776000s).");
+                return false;
+            }
+
             return isValid;
         },
         async handleSubmit() {
@@ -140,12 +146,12 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui blue right ribbon label">Send</a>
-            <div class="header">Send Video</div>
+            <a class="ui blue right ribbon label">Enviar</a>
+            <div class="header">Enviar Vídeo</div>
             <div class="description">
-                Send video
+                Enviar vídeo
                 <div class="ui blue horizontal label">mp4</div>
-                up to
+                até
                 <div class="ui blue horizontal label">{{ maxVideoSize }}</div>
             </div>
         </div>
@@ -155,59 +161,59 @@ export default {
     <div class="ui small modal" id="modalSendVideo">
         <i class="close icon"></i>
         <div class="header">
-            Send Video
+            Enviar Vídeo
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone" :show-status="true"/>
                 
                 <div class="field">
-                    <label>Caption</label>
-                    <textarea v-model="caption" placeholder="Type some caption (optional)..."
+                    <label>Legenda</label>
+                    <textarea v-model="caption" placeholder="Digite uma legenda (opcional)..."
                               aria-label="caption"></textarea>
                 </div>
                 <div class="field" v-if="isShowAttributes()">
-                    <label>View Once</label>
+                    <label>Ver Uma Vez</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="view once" v-model="view_once">
-                        <label>Check for enable one time view</label>
+                        <label>Marque para ativar a visualização única</label>
                     </div>
                 </div>
                 <div class="field" v-if="isShowAttributes()">
-                    <label>Compress</label>
+                    <label>Comprimir</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="compress" v-model="compress">
-                        <label>Check for compressing video to smaller size</label>
+                        <label>Marque para comprimir o vídeo para um tamanho menor</label>
                     </div>
                 </div>
                 <div class="field" v-if="isShowAttributes() && !view_once">
-                    <label>Is Forwarded</label>
+                    <label>É Encaminhada</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="is forwarded" v-model="is_forwarded">
-                        <label>Mark video as forwarded</label>
+                        <label>Marcar vídeo como encaminhado</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Disappearing Duration (seconds)</label>
-                    <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
+                    <label>Duração de Mensagem Temporária (segundos)</label>
+                    <input v-model.number="duration" type="number" min="0" max="7776000" placeholder="0 (sem expiração), 24h a 90d" aria-label="duration"/>
                 </div>
                 <div class="field">
-                    <label>Video URL</label>
+                    <label>URL do Vídeo</label>
                     <input type="text" v-model="video_url" placeholder="https://example.com/sample.mp4"
                            aria-label="video_url" />
                 </div>
-                <div style="text-align: left; font-weight: bold; margin: 10px 0;" v-if="!video_url">or you can upload video from your device</div>
+                <div style="text-align: left; font-weight: bold; margin: 10px 0;" v-if="!video_url">ou você pode carregar vídeo do seu dispositivo</div>
                 <div class="field" style="padding-bottom: 30px" v-if="!video_url">
-                    <label>Video</label>
+                    <label>Vídeo</label>
                     <input type="file" style="display: none" accept="video/*" id="file_video" @change="handleFileChange">
                     <label for="file_video" class="ui positive medium green left floated button" style="color: white">
                         <i class="ui upload icon"></i>
-                        Upload video
+                        Carregar vídeo
                     </label>
                     <div v-if="selectedFileName" style="margin-top: 60px">
                         <div class="ui message">
                             <i class="file icon"></i>
-                            Selected file: {{ selectedFileName }}
+                            Arquivo selecionado: {{ selectedFileName }}
                         </div>
                     </div>
                 </div>
@@ -217,7 +223,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                  :class="{'loading': loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Send
+                Enviar
                 <i class="send icon"></i>
             </button>
         </div>

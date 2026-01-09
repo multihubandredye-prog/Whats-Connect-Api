@@ -39,7 +39,7 @@ export default {
             try {
                 let response = await this.submitApi()
                 this.groupInfo = response.results;
-                showSuccessInfo('Group information retrieved successfully');
+                showSuccessInfo('Informações do grupo obtidas com sucesso');
             } catch (err) {
                 showErrorInfo(err)
             }
@@ -67,7 +67,7 @@ export default {
             this.groupInfo = null;
         },
         formatDate(dateString) {
-            if (!dateString) return 'N/A';
+            if (!dateString) return 'N/D';
             return moment(dateString).format('YYYY-MM-DD HH:mm');
         },
         closeModal() {
@@ -78,10 +78,10 @@ export default {
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
-            <a class="ui green right ribbon label">Group</a>
-            <div class="header">Group Preview</div>
+            <a class="ui green right ribbon label">Grupo</a>
+            <div class="header">Pré-visualização do Grupo</div>
             <div class="description">
-                Get group information from invitation link
+                Obter informações do grupo a partir do link de convite
             </div>
         </div>
     </div>
@@ -90,72 +90,72 @@ export default {
     <div class="ui small modal" id="modalGroupInfoFromLink">
         <i class="close icon"></i>
         <div class="header">
-            Group Information Preview
+            Pré-visualização das Informações do Grupo
         </div>
         <div class="content">
             <form class="ui form">
                 <div class="field">
-                    <label>Invitation Link</label>
+                    <label>Link de Convite</label>
                     <input v-model="link" type="text"
-                           placeholder="Invitation link..."
-                           aria-label="Invitation Link">
+                           placeholder="Link de convite..."
+                           aria-label="Link de Convite">
                 </div>
                 
                 <div v-if="groupInfo" class="ui segment">
-                    <h4 class="ui header">Group Details</h4>
+                    <h4 class="ui header">Detalhes do Grupo</h4>
                     <div class="ui relaxed divided list">
                         <div class="item">
                             <div class="content">
-                                <div class="header">Group Name</div>
-                                <div class="description">{{ groupInfo.name || 'N/A' }}</div>
+                                <div class="header">Nome do Grupo</div>
+                                <div class="description">{{ groupInfo.name || 'N/D' }}</div>
                             </div>
                         </div>
                         <div class="item">
                             <div class="content">
-                                <div class="header">Group ID</div>
-                                <div class="description">{{ groupInfo.group_id || 'N/A' }}</div>
+                                <div class="header">ID do Grupo</div>
+                                <div class="description">{{ groupInfo.group_id || 'N/D' }}</div>
                             </div>
                         </div>
                         <div class="item">
                             <div class="content">
-                                <div class="header">Topic</div>
-                                <div class="description">{{ groupInfo.topic || 'No topic set' }}</div>
+                                <div class="header">Tópico</div>
+                                <div class="description">{{ groupInfo.topic || 'Nenhum tópico definido' }}</div>
                             </div>
                         </div>
                         <div class="item">
                             <div class="content">
-                                <div class="header">Description</div>
-                                <div class="description">{{ groupInfo.description || 'No description' }}</div>
+                                <div class="header">Descrição</div>
+                                <div class="description">{{ groupInfo.description || 'Nenhuma descrição' }}</div>
                             </div>
                         </div>
                         <div class="item">
                             <div class="content">
-                                <div class="header">Created At</div>
+                                <div class="header">Criado Em</div>
                                 <div class="description">{{ formatDate(groupInfo.created_at) }}</div>
                             </div>
                         </div>
                         <div class="item">
                             <div class="content">
-                                <div class="header">Participants</div>
-                                <div class="description">{{ groupInfo.participant_count || 0 }} members</div>
+                                <div class="header">Participantes</div>
+                                <div class="description">{{ groupInfo.participant_count || 0 }} membros</div>
                             </div>
                         </div>
                         <div class="item">
                             <div class="content">
-                                <div class="header">Group Settings</div>
+                                <div class="header">Configurações do Grupo</div>
                                 <div class="description">
                                     <div class="ui mini labels">
                                         <div class="ui label" :class="groupInfo.is_locked ? 'red' : 'green'">
                                             <i class="lock icon"></i>
-                                            {{ groupInfo.is_locked ? 'Locked' : 'Unlocked' }}
+                                            {{ groupInfo.is_locked ? 'Bloqueado' : 'Desbloqueado' }}
                                         </div>
                                         <div class="ui label" :class="groupInfo.is_announce ? 'orange' : 'blue'">
                                             <i class="bullhorn icon"></i>
-                                            {{ groupInfo.is_announce ? 'Announce Mode' : 'Regular Mode' }}
+                                            {{ groupInfo.is_announce ? 'Modo Anúncio' : 'Modo Regular' }}
                                         </div>
                                         <div class="ui label" :class="groupInfo.is_ephemeral ? 'purple' : 'grey'">
                                             <i class="clock icon"></i>
-                                            {{ groupInfo.is_ephemeral ? 'Disappearing Messages' : 'Regular Messages' }}
+                                            {{ groupInfo.is_ephemeral ? 'Mensagens Temporárias' : 'Mensagens Regulares' }}
                                         </div>
                                     </div>
                                 </div>
@@ -167,12 +167,12 @@ export default {
         </div>
         <div class="actions">
             <button class="ui grey button" @click="closeModal">
-                Close
+                Fechar
             </button>
             <button class="ui approve positive right labeled icon button" 
                     :class="{'loading': this.loading, 'disabled': !this.isValidForm() || this.loading}"
                     @click.prevent="handleSubmit" type="button">
-                Get Info
+                Obter Informações
                 <i class="info icon"></i>
             </button>
         </div>

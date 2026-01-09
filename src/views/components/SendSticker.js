@@ -42,6 +42,12 @@ export default {
                 return false;
             }
 
+            // Validate duration
+            if (this.duration !== 0 && (this.duration < 86400 || this.duration > 7776000)) {
+                showErrorInfo("Duração inválida. Use 0 para sem expiração, ou entre 24 horas (86400s) e 90 dias (7776000s).");
+                return false;
+            }
+
             return true;
         },
         async handleSubmit() {
@@ -84,7 +90,8 @@ export default {
                     throw new Error(error.response.data.message);
                 }
                 throw new Error(error.message);
-            } finally {
+            }
+            finally {
                 this.loading = false;
             }
         },
@@ -115,10 +122,10 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor:pointer;">
         <div class="content">
-            <a class="ui blue right ribbon label">Send</a>
-            <div class="header">Send Sticker</div>
+            <a class="ui blue right ribbon label">Enviar</a>
+            <div class="header">Enviar Sticker</div>
             <div class="description">
-                Send sticker with automatic conversion to WebP format
+                Enviar sticker com conversão automática para formato WebP
                 <div class="ui blue horizontal label">jpg/jpeg/png/webp/gif</div>
             </div>
         </div>
@@ -128,50 +135,50 @@ export default {
     <div class="ui small modal" id="modalSendSticker">
         <i class="close icon"></i>
         <div class="header">
-            Send Sticker
+            Enviar Sticker
         </div>
         <div class="content" style="max-height: 70vh; overflow-y: auto;">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone" :show-status="true"/>
                 
                 <div class="ui info message">
-                    <div class="header">Sticker Information</div>
+                    <div class="header">Informações do Sticker</div>
                     <ul class="list">
-                        <li>Images will be automatically converted to WebP sticker format</li>
-                        <li>Maximum sticker size is 512x512 pixels (automatic resizing)</li>
-                        <li>Supports JPG, JPEG, PNG, WebP, and GIF formats</li>
-                        <li>Transparent backgrounds are preserved for PNG images</li>
+                        <li>Imagens serão automaticamente convertidas para o formato de sticker WebP</li>
+                        <li>Tamanho máximo do sticker é 512x512 pixels (redimensionamento automático)</li>
+                        <li>Suporta formatos JPG, JPEG, PNG, WebP e GIF</li>
+                        <li>Fundos transparentes são preservados para imagens PNG</li>
                     </ul>
                 </div>
                 
                 <div class="field" v-if="isShowAttributes()">
-                    <label>Is Forwarded</label>
+                    <label>É Encaminhada</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="is forwarded" v-model="is_forwarded">
-                        <label>Mark sticker as forwarded</label>
+                        <label>Marcar sticker como encaminhado</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Disappearing Duration (seconds)</label>
-                    <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
+                    <label>Duração de Mensagem Temporária (segundos)</label>
+                    <input v-model.number="duration" type="number" min="0" max="7776000" placeholder="0 (sem expiração), 24h a 90d" aria-label="duration"/>
                 </div>
                 <div class="field">
-                    <label>Sticker URL</label>
+                    <label>URL do Sticker</label>
                     <input type="text" v-model="sticker_url" placeholder="https://example.com/sticker.png"
                            aria-label="sticker_url"/>
                 </div>
-                <div style="text-align: left; font-weight: bold; margin: 10px 0;">or you can upload sticker from your device</div>
+                <div style="text-align: left; font-weight: bold; margin: 10px 0;">ou você pode carregar sticker do seu dispositivo</div>
                 <div class="field" style="padding-bottom: 30px">
-                    <label>Sticker Image</label>
+                    <label>Imagem do Sticker</label>
                     <input type="file" style="display: none" id="file_sticker" accept="image/png,image/jpg,image/jpeg,image/webp,image/gif" @change="handleStickerChange"/>
                     <label for="file_sticker" class="ui positive medium blue left floated button" style="color: white">
                         <i class="ui upload icon"></i>
-                        Upload sticker
+                        Carregar sticker
                     </label>
                     <div v-if="preview_url" style="margin-top: 60px">
                         <div class="ui segment">
                             <img :src="preview_url" style="max-width: 100%; max-height: 300px; object-fit: contain" />
-                            <div class="ui top attached label">Preview (will be converted to WebP sticker)</div>
+                            <div class="ui top attached label">Pré-visualização (será convertido para sticker WebP)</div>
                         </div>
                     </div>
                 </div>
@@ -181,7 +188,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                  :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Send
+                Enviar
                 <i class="send icon"></i>
             </button>
         </div>

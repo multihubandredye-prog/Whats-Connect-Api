@@ -56,10 +56,10 @@ export default {
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
-            <a class="ui green right ribbon label">Group</a>
-            <div class="header">Set Group Name</div>
+            <a class="ui green right ribbon label">Grupo</a>
+            <div class="header">Definir Nome do Grupo</div>
             <div class="description">
-                Change the group name/title
+                Alterar o nome/título do grupo
             </div>
         </div>
     </div>
@@ -68,24 +68,29 @@ export default {
     <div class="ui small modal" id="modalGroupSetName">
         <i class="close icon"></i>
         <div class="header">
-            Set Group Name
+            Definir Nome do Grupo
         </div>
         <div class="content">
+            <div class="ui info message">
+                <i class="info circle icon"></i>
+                Seu nome de exibição é o nome mostrado a outros no WhatsApp.
+            </div>
+            
             <form class="ui form">
                 <div class="field">
-                    <label>Group ID</label>
+                    <label>ID do Grupo</label>
                     <input v-model="groupId" type="text"
                            placeholder="120363024512399999@g.us"
                            aria-label="Group ID">
                 </div>
                 
                 <div class="field">
-                    <label>Group Name</label>
+                    <label>Nome do Grupo</label>
                     <input v-model="name" type="text"
-                           placeholder="Enter new group name..."
+                           placeholder="Insira o novo nome do grupo..."
                            maxlength="25"
                            aria-label="Group Name">
-                    <small class="text">Maximum 25 characters. Current length: {{ name.length }}/25</small>
+                    <small class="text">Máximo 25 caracteres. Comprimento atual: {{ name.length }}/25</small>
                 </div>
             </form>
         </div>
@@ -93,10 +98,10 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                     :class="{'loading': this.loading, 'disabled': !this.isValidForm() || this.loading}"
                     @click.prevent="handleSubmit" type="button">
-                Update Name
+                Atualizar Nome
                 <i class="edit icon"></i>
             </button>
-        </div>
+        }
     </div>
     `
 } 

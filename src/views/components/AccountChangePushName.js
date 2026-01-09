@@ -56,10 +56,10 @@ export default {
     template: `
     <div class="olive card" @click="openModal()" style="cursor:pointer;">
         <div class="content">
-            <a class="ui olive right ribbon label">Account</a>
-            <div class="header">Change Push Name</div>
+            <a class="ui olive right ribbon label">Conta</a>
+            <div class="header">Mudar Nome de Exibição</div>
             <div class="description">
-                Update your WhatsApp display name
+                Atualize seu nome de exibição no WhatsApp
             </div>
         </div>
     </div>
@@ -68,18 +68,18 @@ export default {
     <div class="ui small modal" id="modalChangePushName">
         <i class="close icon"></i>
         <div class="header">
-            Change Push Name
+            Mudar Nome de Exibição
         </div>
         <div class="content" style="max-height: 70vh; overflow-y: auto;">
             <div class="ui info message">
                 <i class="info circle icon"></i>
-                Your push name is the display name shown to others in WhatsApp.
+                Seu nome de exibição é o nome mostrado a outros no WhatsApp.
             </div>
             
             <form class="ui form">
                 <div class="field">
-                    <label>New Push Name</label>
-                    <input type="text" v-model="push_name" placeholder="Enter your new display name">
+                    <label>Novo Nome de Exibição</label>
+                    <input type="text" v-model="push_name" placeholder="Digite seu novo nome de exibição">
                 </div>
             </form>
         </div>
@@ -87,7 +87,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                  :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Update Push Name
+                Atualizar Nome de Exibição
                 <i class="save icon"></i>
             </button>
         </div>

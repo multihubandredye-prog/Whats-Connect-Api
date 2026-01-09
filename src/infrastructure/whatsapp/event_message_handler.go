@@ -129,8 +129,8 @@ func handleWebhookForward(ctx context.Context, evt *events.Message, client *what
 		case "REVOKE", "MESSAGE_EDIT":
 			// These are meaningful user actions, allow webhook
 		default:
-			log.Debugf("Skipping webhook for protocol message type: %s", protocolType)
-			return
+			log.Debugf("Proceeding with webhook for protocol message type: %s", protocolType)
+			// Do not return here, continue processing for webhook
 		}
 	}
 
@@ -140,8 +140,7 @@ func handleWebhookForward(ctx context.Context, evt *events.Message, client *what
 	// Note: Protocol messages (REVOKE, MESSAGE_EDIT) are allowed through above.
 	// We also allow PollUpdateMessage through, as it's a new interaction, not an echo.
 	if evt.Info.IsFromMe && evt.Message.GetPollUpdateMessage() == nil {
-		log.Debugf("Skipping webhook for outgoing message %s (IsFromMe=true)", evt.Info.ID)
-		return
+		log.Debugf("Forwarding webhook for outgoing message %s (IsFromMe=true)", evt.Info.ID)
 	} else if evt.Info.IsFromMe {
 		log.Debugf("Forwarding webhook for outgoing message %s (IsFromMe=true) because it is a poll update", evt.Info.ID)
 	} else {

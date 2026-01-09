@@ -39,6 +39,12 @@ export default {
                 return false;
             }
 
+            // Validate duration
+            if (this.duration !== 0 && (this.duration < 86400 || this.duration > 7776000)) {
+                showErrorInfo("Duração inválida. Use 0 para sem expiração, ou entre 24 horas (86400s) e 90 dias (7776000s).");
+                return false;
+            }
+
             return true;
         },
         async handleSubmit() {
@@ -106,10 +112,10 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui blue right ribbon label">Send</a>
-            <div class="header">Send Audio</div>
+            <a class="ui blue right ribbon label">Enviar</a>
+            <div class="header">Enviar Áudio</div>
             <div class="description">
-                Send audio to user or group
+                Enviar áudio para usuário ou grupo
             </div>
         </div>
     </div>
@@ -118,49 +124,47 @@ export default {
     <div class="ui small modal" id="modalAudioSend">
         <i class="close icon"></i>
         <div class="header">
-            Send Audio
+            Enviar Áudio
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone"/>
                 <div class="field">
-                    <label>Is Forwarded</label>
+                    <label>É Encaminhada</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="is forwarded" v-model="is_forwarded">
-                        <label>Mark audio as forwarded</label>
+                        <label>Marcar áudio como encaminhado</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Voice Note (PTT)</label>
+                    <label>Nota de Voz (PTT)</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="ptt" v-model="ptt">
-                        <label>Send as voice note (required for OGG/Opus files)</label>
+                        <label>Enviar como nota de voz (necessário para arquivos OGG/Opus)</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Disappearing Duration (seconds)</label>
-                    <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
+                    <label>Duração de Mensagem Temporária (segundos)</label>
+                    <input v-model.number="duration" type="number" min="0" max="7776000" placeholder="0 (sem expiração), 24h a 90d" aria-label="duration"/>
                 </div>
                 <div class="field">
-                    <label>Audio URL</label>
+                    <label>URL do Áudio</label>
                     <input type="text" v-model="audio_url" placeholder="https://example.com/audio.mp3"
                            aria-label="audio_url"/>
                 </div>
-                <div style="text-align: left; font-weight: bold; margin: 10px 0;">or you can upload audio from your
-                    device
-                </div>
+                <div style="text-align: left; font-weight: bold; margin: 10px 0;">ou você pode carregar áudio do seu dispositivo
                 <div class="field" style="padding-bottom: 30px">
-                    <label>Audio</label>
+                    <label>Áudio</label>
                     <input type="file" style="display: none" accept="audio/*" id="file_audio"
                            @change="handleFileChange"/>
                     <label for="file_audio" class="ui positive medium green left floated button" style="color: white">
                         <i class="ui upload icon"></i>
-                        Upload
+                        Carregar
                     </label>
                     <div v-if="selectedFileName" style="margin-top: 60px">
                         <div class="ui message">
                             <i class="file icon"></i>
-                            Selected file: {{ selectedFileName }}
+                            Arquivo selecionado: {{ selectedFileName }}
                         </div>
                     </div>
                 </div>
@@ -169,7 +173,7 @@ export default {
         <div class="actions">
             <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Send
+                Enviar
                 <i class="send icon"></i>
             </button>
         </div>

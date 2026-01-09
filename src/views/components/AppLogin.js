@@ -16,7 +16,7 @@ export default {
     methods: {
         async openModal() {
             try {
-                if (this.loggedIn) throw Error('You are already logged in.');
+                if (this.loggedIn) throw Error('Você já está logado.');
 
                 await this.submitApi();
                 $('#modalLogin').modal({
@@ -33,7 +33,7 @@ export default {
         },
         async submitApi() {
             try {
-                // Stop existing countdown before making new request
+                // Parar a contagem regressiva existente antes de fazer uma nova solicitação
                 this.stopCountdown();
                 
                 let response = await window.http.get(`app/login`)
@@ -41,7 +41,7 @@ export default {
                 this.login_link = results.qr_link;
                 this.login_duration_sec = results.qr_duration;
                 
-                // Start countdown after successful API call
+                // Iniciar contagem regressiva após chamada de API bem-sucedida
                 this.startCountdown();
             } catch (error) {
                 if (error.response) {
@@ -51,14 +51,14 @@ export default {
             }
         },
         startCountdown() {
-            // Clear any existing timer
+            // Limpar qualquer timer existente
             this.stopCountdown();
             
             this.countdown_timer = setInterval(() => {
                 if (this.login_duration_sec > 0) {
                     this.login_duration_sec--;
                 } else {
-                    // Auto refresh when countdown reaches 0
+                    // Atualização automática quando a contagem regressiva chega a 0
                     this.autoRefresh();
                 }
             }, 1000);
@@ -71,26 +71,26 @@ export default {
         },
         async autoRefresh() {
             try {
-                console.log('QR Code expired, auto refreshing...');
+                console.log('Código QR expirado, atualizando automaticamente...');
                 await this.submitApi();
             } catch (error) {
-                console.error('Auto refresh failed:', error);
+                console.error('Falha na atualização automática:', error);
                 this.stopCountdown();
                 showErrorInfo(error);
             }
         }
     },
     beforeUnmount() {
-        // Clean up timer when component is destroyed
+        // Limpar o timer quando o componente é destruído
         this.stopCountdown();
     },
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
             <a class="ui teal right ribbon label">App</a>
-            <div class="header">Login</div>
+            <div class="header">Entrar</div>
             <div class="description">
-                Scan your QR code to access all API capabilities.
+                Escaneie seu código QR para acessar todos os recursos da API.
             </div>
         </div>
     </div>
@@ -99,24 +99,24 @@ export default {
     <div class="ui small modal" id="modalLogin">
         <i class="close icon"></i>
         <div class="header">
-            Login Whatsapp
+            Entrar no Whatsapp
         </div>
         <div class="image content">
             <div class="ui medium image">
-                <img :src="login_link" alt="qrCodeLogin">
+                <img :src="login_link" alt="Código QR para Login">
             </div>
             <div class="description">
-                <div class="ui header">Please scan to connect</div>
-                <p>Open Setting > Linked Devices > Link Device</p>
+                <div class="ui header">Por favor, escaneie para conectar</div>
+                <p>Abrir Configurações > Aparelhos Conectados > Conectar um Aparelho</p>
                 <div style="padding-top: 50px;">
-                    <i v-if="login_duration_sec > 0">QR Code expires in {{ login_duration_sec }} seconds (auto-refreshing)</i>
-                    <i v-else class="ui active inline">Refreshing QR Code...</i>
+                    <i v-if="login_duration_sec > 0">O Código QR expira em {{ login_duration_sec }} segundos (atualização automática)</i>
+                    <i v-else class="ui active inline">Atualizando Código QR...</i>
                 </div>
             </div>
         </div>
         <div class="actions">
             <div class="ui approve positive right labeled icon button" @click="submitApi">
-                Refresh QR Code
+                Atualizar Código QR
                 <i class="refresh icon"></i>
             </div>
         </div>

@@ -65,10 +65,10 @@ export default {
     template: `
     <div class="olive card" @click="openModal()" style="cursor:pointer;">
         <div class="content">
-            <a class="ui olive right ribbon label">Account</a>
-            <div class="header">Change Avatar</div>
+            <a class="ui olive right ribbon label">Conta</a>
+            <div class="header">Mudar Avatar</div>
             <div class="description">
-                Update your profile picture
+                Atualize sua foto de perfil
             </div>
         </div>
     </div>
@@ -77,25 +77,25 @@ export default {
     <div class="ui small modal" id="modalChangeAvatar">
         <i class="close icon"></i>
         <div class="header">
-            Change Avatar
+            Mudar Avatar
         </div>
         <div class="content" style="max-height: 70vh; overflow-y: auto;">
             <div class="ui warning message">
                 <i class="info circle icon"></i>
-                Please upload a square image (1:1 aspect ratio) to avoid cropping.
-                For best results, use an image at least 400x400 pixels.
+                Por favor, carregue uma imagem quadrada (proporção de 1:1) para evitar cortes.
+                Para melhores resultados, use uma imagem de pelo menos 400x400 pixels.
             </div>
             
             <form class="ui form">
                 <div class="field" style="padding-bottom: 30px">
-                    <label>Avatar Image</label>
+                    <label>Imagem do Avatar</label>
                     <input type="file" style="display: none" id="file_avatar" accept="image/png,image/jpg,image/jpeg" @change="handleImageChange"/>
                     <label for="file_avatar" class="ui positive medium green left floated button" style="color: white">
                         <i class="ui upload icon"></i>
-                        Upload image
+                        Carregar imagem
                     </label>
                     <div v-if="preview_url" style="margin-top: 60px">
-                        <img :src="preview_url" style="max-width: 100%; max-height: 300px; object-fit: contain" />
+                        <img :src="preview_url" alt="Pré-visualização do Avatar" style="max-width: 100%; max-height: 300px; object-fit: contain" />
                     </div>
                 </div>
             </form>
@@ -104,7 +104,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                  :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Update Avatar
+                Atualizar Avatar
                 <i class="save icon"></i>
             </button>
         </div>

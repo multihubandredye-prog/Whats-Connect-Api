@@ -77,10 +77,10 @@ export default {
     template: `
     <div class="red card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui red right ribbon label">Message</a>
-            <div class="header">Mark as Read</div>
+            <a class="ui red right ribbon label">Mensagem</a>
+            <div class="header">Marcar como Lida</div>
             <div class="description">
-                Mark a message as read in a chat
+                Marcar uma mensagem como lida em um chat
             </div>
         </div>
     </div>
@@ -89,15 +89,15 @@ export default {
     <div class="ui small modal" id="modalMessageRead">
         <i class="close icon"></i>
         <div class="header">
-            Mark Message as Read
+            Marcar Mensagem como Lida
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone"/>
                 
                 <div class="field">
-                    <label>Message ID</label>
-                    <input v-model="message_id" type="text" placeholder="Please enter the message id to mark as read"
+                    <label>ID da Mensagem</label>
+                    <input v-model="message_id" type="text" placeholder="Por favor, insira o ID da mensagem para marcar como lida"
                            aria-label="message id">
                 </div>
             </form>
@@ -105,7 +105,7 @@ export default {
         <div class="actions">
             <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Mark as Read
+                Marcar como Lida
                 <i class="check icon"></i>
             </button>
         </div>

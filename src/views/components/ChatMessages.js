@@ -58,7 +58,7 @@ export default {
     },
     async loadMessages() {
       if (!this.isValidForm()) {
-        showErrorInfo("Please enter a valid JID");
+        showErrorInfo("Por favor, insira um JID válido");
         return;
       }
 
@@ -96,14 +96,14 @@ export default {
         this.totalMessages = response.data.results?.pagination?.total || 0;
 
         if (this.messages.length === 0) {
-          showErrorInfo("No messages found for the specified criteria");
+          showErrorInfo("Nenhuma mensagem encontrada para os critérios especificados");
         } else {
           // Auto-download media for loaded messages
           this.downloadAllMediaInMessages();
         }
       } catch (error) {
         showErrorInfo(
-          error.response?.data?.message || "Failed to load messages"
+          error.response?.data?.message || "Falha ao carregar mensagens"
         );
       } finally {
         this.loading = false;
@@ -142,24 +142,24 @@ export default {
       this.currentDownloads = 0;
     },
     formatTimestamp(timestamp) {
-      if (!timestamp) return "N/A";
+      if (!timestamp) return "N/D";
       return moment(timestamp).format("MMM DD, YYYY HH:mm:ss");
     },
     formatMessageType(message) {
       if (message.media_type) return message.media_type.toUpperCase();
       if (message.message_type) return message.message_type.toUpperCase();
-      return "TEXT";
+      return "TEXTO";
     },
     formatSender(message) {
-      if (message.is_from_me) return "Me";
-      return message.push_name || message.sender_jid || "Unknown";
+      if (message.is_from_me) return "Eu";
+      return message.push_name || message.sender_jid || "Desconhecido";
     },
     getMessageContent(message) {
       if (message.content) return message.content;
       if (message.text) return message.text;
       if (message.caption) return message.caption;
       if (message.media_type) return `[${message.media_type.toUpperCase()}]`;
-      return "[No content]";
+      return "[Sem conteúdo]";
     },
     getMediaDisplay(message) {
       if (!message.media_type || !message.url || !message.id) {
@@ -176,7 +176,7 @@ export default {
       if (isDownloading) {
         return {
           type: 'loading',
-          content: `<div class="ui active mini inline loader"></div> Downloading ${message.media_type}...`
+          content: `<div class="ui active mini inline loader"></div> Baixando ${message.media_type}...`
         };
       }
 
@@ -186,10 +186,10 @@ export default {
           type: 'error',
           content: `<div class="ui red message">
             <i class="exclamation triangle icon"></i>
-            Failed to download ${message.media_type}
+            Falha ao baixar ${message.media_type}
             <span class="ui mini button" style="cursor: pointer; margin-left: 10px;" 
                   onclick="document.dispatchEvent(new CustomEvent('retryMediaDownload', {detail: '${messageId}'}))">
-              <i class="redo icon"></i> Retry
+              <i class="redo icon"></i> Tentar Novamente
             </span>
           </div>`
         };
@@ -212,7 +212,7 @@ export default {
                 <div style="display: none;" class="ui placeholder segment">
                   <div class="ui icon header">
                     <i class="image outline icon"></i>
-                    Image not available
+                    Imagem não disponível
                   </div>
                 </div>
               </div>`
@@ -226,7 +226,7 @@ export default {
                   <source src="${filePath}" type="video/mp4">
                   <source src="${filePath}" type="video/webm">
                   <source src="${filePath}" type="video/ogg">
-                  Your browser does not support the video tag.
+                  Seu navegador não suporta a tag de vídeo.
                 </video>
               </div>`
             };
@@ -239,7 +239,7 @@ export default {
                   <source src="${filePath}" type="audio/mpeg">
                   <source src="${filePath}" type="audio/ogg">
                   <source src="${filePath}" type="audio/wav">
-                  Your browser does not support the audio tag.
+                  Seu navegador não suporta a tag de áudio.
                 </audio>
               </div>`
             };
@@ -254,7 +254,7 @@ export default {
                   ${filename} ${sizeText}
                 </a>
                 <div class="ui basic left pointing label">
-                  Document
+                  Documento
                 </div>
               </div>`
             };
@@ -268,7 +268,7 @@ export default {
                 <div style="display: none;" class="ui placeholder segment">
                   <div class="ui icon header">
                     <i class="smile outline icon"></i>
-                    Sticker not available
+                    Sticker não disponível
                   </div>
                 </div>
               </div>`
@@ -279,7 +279,7 @@ export default {
               type: 'unknown',
               content: `<div class="ui message">
                 <i class="file icon"></i>
-                Unknown media type: ${mediaType}
+                Tipo de mídia desconhecido: ${mediaType}
               </div>`
             };
         }
@@ -290,7 +290,7 @@ export default {
         type: 'available',
         content: `<div class="ui tiny blue label">
           <i class="linkify icon"></i>
-          ${message.media_type.toUpperCase()} Available
+          ${message.media_type.toUpperCase()} Disponível
         </div>`
       };
     },
@@ -363,8 +363,8 @@ export default {
           };
         }
       } catch (error) {
-        console.error(`Failed to download media for message ${messageId}:`, error);
-        this.mediaDownloadErrors[messageId] = error.response?.data?.message || 'Download failed';
+        console.error(`Falha ao baixar mídia para a mensagem ${messageId}:`, error);
+        this.mediaDownloadErrors[messageId] = error.response?.data?.message || 'Falha no download';
       } finally {
         this.downloadingMedia.delete(messageId);
         this.currentDownloads--;
@@ -459,9 +459,9 @@ export default {
     <div class="purple card" @click="openModal()" style="cursor: pointer">
         <div class="content">
             <a class="ui purple right ribbon label">Chat</a>
-            <div class="header">Chat Messages</div>
+            <div class="header">Mensagens de Conversa</div>
             <div class="description">
-                View messages from specific chats with advanced filtering
+                Ver mensagens de conversas específicas com filtragem avançada
             </div>
         </div>
     </div>
@@ -471,54 +471,54 @@ export default {
         <i class="close icon"></i>
         <div class="header">
             <i class="comment icon"></i>
-            Chat Messages
+            Mensagens de Conversa
         </div>
         <div class="content">
             <div class="ui form">
                 <div class="field">
-                    <label>Chat JID</label>
+                    <label>JID da Conversa</label>
                     <input type="text" 
-                           placeholder="Enter phone number or full JID (e.g. 1234567890 or group-id@g.us)" 
+                           placeholder="Insira o número de telefone ou JID completo (ex: 1234567890 ou id-do-grupo@g.us)" 
                            v-model="jid">
                 </div>
                 
                 <div class="ui accordion">
                     <div class="title">
                         <i class="dropdown icon"></i>
-                        Advanced Filters (Optional)
+                        Filtros Avançados (Opcional)
                     </div>
                     <div class="content">
                         <div class="fields">
                             <div class="eight wide field">
-                                <label>Search Message Content</label>
+                                <label>Buscar Conteúdo da Mensagem</label>
                                 <input type="text" 
-                                       placeholder="Search in message text..." 
+                                       placeholder="Buscar no texto da mensagem..." 
                                        v-model="searchQuery">
                             </div>
                             <div class="four wide field">
-                                <label>Sender Filter</label>
+                                <label>Filtro de Remetente</label>
                                 <select class="ui dropdown" v-model="isFromMe">
-                                    <option value="">All messages</option>
-                                    <option value="true">My messages</option>
-                                    <option value="false">Their messages</option>
+                                    <option value="">Todas as mensagens</option>
+                                    <option value="true">Minhas mensagens</option>
+                                    <option value="false">Mensagens deles</option>
                                 </select>
                             </div>
                             <div class="four wide field">
                                 <label>&nbsp;</label>
                                 <div class="ui checkbox">
                                     <input type="checkbox" v-model="onlyMedia">
-                                    <label>Media only</label>
+                                    <label>Apenas mídia</label>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="fields">
                             <div class="eight wide field">
-                                <label>Start Date/Time</label>
+                                <label>Data/Hora de Início</label>
                                 <input type="datetime-local" v-model="startTime">
                             </div>
                             <div class="eight wide field">
-                                <label>End Date/Time</label>
+                                <label>Data/Hora de Término</label>
                                 <input type="datetime-local" v-model="endTime">
                             </div>
                         </div>
@@ -533,11 +533,11 @@ export default {
                         :class="{'disabled': !isValidForm() || loading}"
                         @click="loadMessages">
                     <i class="search icon"></i>
-                    {{ loading ? 'Loading...' : 'Load Messages' }}
+                    {{ loading ? 'Carregando...' : 'Carregar Mensagens' }}
                 </button>
                 <button class="ui button" @click="handleReset">
                     <i class="refresh icon"></i>
-                    Reset
+                    Redefinir
                 </button>
             </div>
             
@@ -546,18 +546,18 @@ export default {
             <div v-else-if="messages.length === 0 && totalMessages === 0" class="ui placeholder segment">
                 <div class="ui icon header">
                     <i class="comment outline icon"></i>
-                    No messages loaded
+                    Nenhuma mensagem carregada
                 </div>
-                <p>Enter a JID and click "Load Messages" to view chat history</p>
+                <p>Insira um JID e clique em "Carregar Mensagens" para ver o histórico da conversa</p>
             </div>
             
             <div v-else-if="messages.length > 0">
                 <div style="padding-top: 1em; padding-bottom: 1em;">
                     <div class="ui info message">
                         <div class="header">
-                            Chat Messages for {{ formattedJid }}
+                            Mensagens de Conversa para {{ formattedJid }}
                         </div>
-                        <p>Showing {{ messages.length }} of {{ totalMessages }} messages</p>
+                        <p>Exibindo {{ messages.length }} de {{ totalMessages }} mensagens</p>
                     </div>
                 </div>
                 
@@ -597,7 +597,7 @@ export default {
                         <i class="left chevron icon"></i>
                     </a>
                     <div class="item">
-                        Page {{ currentPage }} of {{ totalPages }}
+                        Página {{ currentPage }} de {{ totalPages }}
                     </div>
                     <a class="icon item" @click="nextPage" :class="{ disabled: currentPage === totalPages }">
                         <i class="right chevron icon"></i>
@@ -608,9 +608,9 @@ export default {
         <div class="actions">
             <button class="ui button" @click="backToChatList">
                 <i class="arrow left icon"></i>
-                Back to Chat List
+                Voltar para a Lista de Conversas
             </button>
-            <div class="ui approve button">Close</div>
+            <div class="ui approve button">Fechar</div>
         </div>
     </div>
     `,

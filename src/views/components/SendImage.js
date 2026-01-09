@@ -54,6 +54,12 @@ export default {
                 return false;
             }
 
+            // Validate duration if not view_once
+            if (!this.view_once && this.duration !== 0 && (this.duration < 86400 || this.duration > 7776000)) {
+                showErrorInfo("Duração inválida. Use 0 para sem expiração, ou entre 24 horas (86400s) e 90 dias (7776000s).");
+                return false;
+            }
+
             return true;
         },
         async handleSubmit() {
@@ -133,12 +139,12 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor:pointer;">
         <div class="content">
-            <a class="ui blue right ribbon label">Send</a>
-            <div class="header">Send Image</div>
+            <a class="ui blue right ribbon label">Enviar</a>
+            <div class="header">Enviar Imagem</div>
             <div class="description">
-                Send image with
+                Enviar imagem com
                 <div class="ui blue horizontal label">jpg/jpeg/png</div>
-                type
+                tipo
             </div>
         </div>
     </div>
@@ -147,54 +153,54 @@ export default {
     <div class="ui small modal" id="modalSendImage">
         <i class="close icon"></i>
         <div class="header">
-            Send Image
+            Enviar Imagem
         </div>
         <div class="content" style="max-height: 70vh; overflow-y: auto;">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone" :show-status="true"/>
                 
                 <div class="field">
-                    <label>Caption</label>
-                    <textarea v-model="caption" type="text" placeholder="Hello this is image caption"
+                    <label>Legenda</label>
+                    <textarea v-model="caption" type="text" placeholder="Olá, esta é a legenda da imagem"
                               aria-label="caption"></textarea>
                 </div>
                 <div class="field" v-if="isShowAttributes()">
-                    <label>View Once</label>
+                    <label>Ver Uma Vez</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="view once" v-model="view_once">
-                        <label>Check for enable one time view</label>
+                        <label>Marque para ativar a visualização única</label>
                     </div>
                 </div>
                 <div class="field" v-if="isShowAttributes()">
-                    <label>Compress</label>
+                    <label>Comprimir</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="compress" v-model="compress">
-                        <label>Check for compressing image to smaller size</label>
+                        <label>Marque para comprimir a imagem para um tamanho menor</label>
                     </div>
                 </div>
                 <div class="field" v-if="isShowAttributes() && !view_once">
-                    <label>Is Forwarded</label>
+                    <label>É Encaminhada</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="is forwarded" v-model="is_forwarded">
-                        <label>Mark image as forwarded</label>
+                        <label>Marcar imagem como encaminhada</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Disappearing Duration (seconds)</label>
-                    <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
+                    <label>Duração de Mensagem Temporária (segundos)</label>
+                    <input v-model.number="duration" type="number" min="0" max="7776000" placeholder="0 (sem expiração), 24h a 90d" aria-label="duration"/>
                 </div>
                 <div class="field">
-                    <label>Image URL</label>
+                    <label>URL da Imagem</label>
                     <input type="text" v-model="image_url" placeholder="https://example.com/image.jpg"
                            aria-label="image_url"/>
                 </div>
-                <div style="text-align: left; font-weight: bold; margin: 10px 0;">or you can upload image from your device</div>
+                <div style="text-align: left; font-weight: bold; margin: 10px 0;">ou você pode carregar imagem do seu dispositivo</div>
                 <div class="field" style="padding-bottom: 30px">
-                    <label>Image</label>
+                    <label>Imagem</label>
                     <input type="file" style="display: none" id="file_image" accept="image/png,image/jpg,image/jpeg" @change="handleImageChange"/>
                     <label for="file_image" class="ui positive medium green left floated button" style="color: white">
                         <i class="ui upload icon"></i>
-                        Upload image
+                        Carregar imagem
                     </label>
                     <div v-if="preview_url" style="margin-top: 60px">
                         <img :src="preview_url" style="max-width: 100%; max-height: 300px; object-fit: contain" />
@@ -206,7 +212,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                  :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Send
+                Enviar
                 <i class="send icon"></i>
             </button>
         </div>

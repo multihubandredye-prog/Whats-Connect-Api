@@ -16,6 +16,9 @@ import (
 	"strings"
 	"time"
 
+	"encoding/base64"
+	"io"
+
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/domains/app"
 	domainChatStorage "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/chatstorage"
@@ -98,89 +101,131 @@ func (service serviceSend) SendText(ctx context.Context, request domainSend.Mess
 		return response, err
 	}
 
-	// Create base message
-	msg := &waE2E.Message{
-		ExtendedTextMessage: &waE2E.ExtendedTextMessage{
-			Text:        proto.String(request.Message),
-			ContextInfo: &waE2E.ContextInfo{},
-		},
-	}
+		// Create base message with an initial ContextInfo
 
-	// Add forwarding context if IsForwarded is true
-	if request.BaseRequest.IsForwarded {
-		msg.ExtendedTextMessage.ContextInfo.IsForwarded = proto.Bool(true)
-		msg.ExtendedTextMessage.ContextInfo.ForwardingScore = proto.Uint32(100)
-	}
+		msg := &waE2E.Message{
 
-	// Set disappearing message duration if provided
-	if request.BaseRequest.Duration != nil && *request.BaseRequest.Duration > 0 {
-		msg.ExtendedTextMessage.ContextInfo.Expiration = proto.Uint32(uint32(*request.BaseRequest.Duration))
-	} else {
-		msg.ExtendedTextMessage.ContextInfo.Expiration = proto.Uint32(service.getDefaultEphemeralExpiration(request.BaseRequest.Phone))
-	}
+			ExtendedTextMessage: &waE2E.ExtendedTextMessage{
 
-	// Get mentions from text (existing behavior - parses @phone from message text)
-	parsedMentions := service.getMentionFromText(ctx, request.Message)
+				Text: proto.String(request.Message),
 
-	// Add explicit mentions from request.Mentions (ghost mentions - no @ required in text)
-	if len(request.Mentions) > 0 {
-		explicitMentions := service.getMentionsFromList(ctx, request.Mentions, dataWaRecipient)
-		parsedMentions = append(parsedMentions, explicitMentions...)
-		// Deduplicate to avoid mentioning the same person twice
-		parsedMentions = utils.UniqueStrings(parsedMentions)
-	}
+				// Initialize ContextInfo here once
 
-	if len(parsedMentions) > 0 {
-		msg.ExtendedTextMessage.ContextInfo.MentionedJID = parsedMentions
-	}
+				ContextInfo: &waE2E.ContextInfo{},
 
-	// Reply message
-	if request.ReplyMessageID != nil && *request.ReplyMessageID != "" {
-		message, err := service.chatStorageRepo.GetMessageByID(*request.ReplyMessageID)
-		if err != nil {
-			logrus.Warnf("Error retrieving reply message ID %s: %v, continuing without reply context", *request.ReplyMessageID, err)
-		} else if message != nil { // Only set reply context if we found the message
-			// Ensure we use a full JID (user@server) for the Participant field
-			// Use the sender JID from storage as-is. Modern storage should already provide
-			// fully-qualified JIDs (e.g., user@s.whatsapp.net or group@g.us). Avoid mutating
-			// the JID here to prevent corrupting valid group or special JIDs.
-			participantJID := message.Sender
+			},
 
-			// Build base ContextInfo with reply details
-			ctxInfo := &waE2E.ContextInfo{
-				StanzaID:    request.ReplyMessageID,
-				Participant: proto.String(participantJID),
-				QuotedMessage: &waE2E.Message{
-					Conversation: proto.String(message.Content),
-				},
-			}
-
-			// Preserve forwarding flag if set
-			if request.BaseRequest.IsForwarded {
-				ctxInfo.IsForwarded = proto.Bool(true)
-				ctxInfo.ForwardingScore = proto.Uint32(100)
-			}
-
-			// Preserve disappearing message duration if provided
-			if request.BaseRequest.Duration != nil && *request.BaseRequest.Duration > 0 {
-				ctxInfo.Expiration = proto.Uint32(uint32(*request.BaseRequest.Duration))
-			} else {
-				ctxInfo.Expiration = proto.Uint32(service.getDefaultEphemeralExpiration(participantJID))
-			}
-
-			// Preserve mentions
-			if len(parsedMentions) > 0 {
-				ctxInfo.MentionedJID = parsedMentions
-			}
-
-			msg.ExtendedTextMessage = &waE2E.ExtendedTextMessage{
-				Text:        proto.String(request.Message),
-				ContextInfo: ctxInfo,
-			}
-		} else {
-			logrus.Warnf("Reply message ID %s not found in storage, continuing without reply context", *request.ReplyMessageID)
 		}
-	}
+
+		ctxInfo := msg.ExtendedTextMessage.ContextInfo
+
+	
+
+		// Add forwarding context if IsForwarded is true
+
+		if request.BaseRequest.IsForwarded {
+
+			ctxInfo.IsForwarded = proto.Bool(true)
+
+			ctxInfo.ForwardingScore = proto.Uint32(100)
+
+		}
+
+	
+
+		// Set disappearing message duration if provided
+
+		if request.BaseRequest.Duration != nil && *request.BaseRequest.Duration > 0 {
+
+			mappedExpiration := mapDurationToWhatsAppExpiration(*request.BaseRequest.Duration)
+
+			ctxInfo.Expiration = proto.Uint32(mappedExpiration)
+
+		} else {
+
+			// Use default ephemeral expiration if no duration is provided or it's 0
+
+			ctxInfo.Expiration = proto.Uint32(service.getDefaultEphemeralExpiration(request.BaseRequest.Phone))
+
+		}
+
+	
+
+		// Get mentions from text (existing behavior - parses @phone from message text)
+
+		parsedMentions := service.getMentionFromText(ctx, request.Message)
+
+	
+
+		// Add explicit mentions from request.Mentions (ghost mentions - no @ required in text)
+
+		if len(request.Mentions) > 0 {
+
+			explicitMentions := service.getMentionsFromList(ctx, request.Mentions, dataWaRecipient)
+
+			parsedMentions = append(parsedMentions, explicitMentions...)
+
+			// Deduplicate to avoid mentioning the same person twice
+
+			parsedMentions = utils.UniqueStrings(parsedMentions)
+
+		}
+
+	
+
+		if len(parsedMentions) > 0 {
+
+			ctxInfo.MentionedJID = parsedMentions
+
+		}
+
+	
+
+		// Reply message
+
+		if request.ReplyMessageID != nil && *request.ReplyMessageID != "" {
+
+			message, err := service.chatStorageRepo.GetMessageByID(*request.ReplyMessageID)
+
+			if err != nil {
+
+				logrus.Warnf("Error retrieving reply message ID %s: %v, continuing without reply context", *request.ReplyMessageID, err)
+
+			} else if message != nil { // Only set reply context if we found the message
+
+				// Parse sender JID from storage to ensure it's a valid types.JID before converting to string.
+
+				parsedSenderJID, err := types.ParseJID(message.Sender)
+
+				if err != nil {
+
+					logrus.Warnf("Failed to parse participant JID '%s' from storage: %v. Continuing without reply context.", message.Sender, err)
+
+								                } else {
+
+								                                    // Populate reply specific fields on the existing ContextInfo
+
+								                                    ctxInfo.StanzaID = request.ReplyMessageID
+
+								                                    ctxInfo.QuotedMessage = service.buildQuotedMessage(message)
+
+								                                    
+
+								                                    // Set Participant to the sender of the original message.
+
+								                                    // For group chats, this will be the participant JID. For 1:1, it will be the sender JID.
+
+								                                    ctxInfo.Participant = proto.String(parsedSenderJID.ToNonAD().String())
+
+								                                }
+
+			} else {
+
+				logrus.Warnf("Reply message ID %s not found in storage, continuing without reply context", *request.ReplyMessageID)
+
+			}
+
+		}
 
 	ts, err := service.wrapSendMessage(ctx, client, dataWaRecipient, msg, request.Message)
 	if err != nil {
@@ -216,54 +261,44 @@ func (service serviceSend) SendImage(ctx context.Context, request domainSend.Ima
 		oriImagePath   string
 	)
 
-	if request.ImageURL != nil && *request.ImageURL != "" {
+	// Ensure temporary files are always removed, even on early returns
+	defer func() {
+		if len(deletedItems) > 0 {
+			// Run cleanup in background with slight delay to avoid race with open handles
+			go utils.RemoveFile(1, deletedItems...)
+		}
+	}()
+
+
+	if request.ImagePath != nil && *request.ImagePath != "" {
+		// Decode Base64 image
+		oriImagePath, err = decodeBase64ToTempFile(ctx, *request.ImagePath, "image", "png") // Assuming PNG for decoded base64
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to decode base64 image: %v", err))
+		}
+		deletedItems = append(deletedItems, oriImagePath)
+		imageName = filepath.Base(oriImagePath) // Extract name from temp path
+	} else if request.ImageURL != nil && *request.ImageURL != "" {
 		// Download image from URL
-		imageData, fileName, err := utils.DownloadImageFromURL(*request.ImageURL)
+		oriImagePath, err = downloadMediaToTempFile(ctx, *request.ImageURL, "image", "png") // Assuming PNG extension
 		if err != nil {
-			return response, pkgError.InternalServerError(fmt.Sprintf("failed to download image from URL %v", err))
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to download image from URL: %v", err))
 		}
-
-		// Check if the downloaded image is WebP and convert to PNG if needed
-		mimeType := http.DetectContentType(imageData)
-		if mimeType == "image/webp" {
-			// Convert WebP to PNG
-			webpImage, err := imaging.Decode(bytes.NewReader(imageData))
-			if err != nil {
-				return response, pkgError.InternalServerError(fmt.Sprintf("failed to decode WebP image %v", err))
-			}
-
-			// Change file extension to PNG
-			if strings.HasSuffix(strings.ToLower(fileName), ".webp") {
-				fileName = fileName[:len(fileName)-5] + ".png"
-			} else {
-				fileName = fileName + ".png"
-			}
-
-			// Convert to PNG format
-			var pngBuffer bytes.Buffer
-			err = imaging.Encode(&pngBuffer, webpImage, imaging.PNG)
-			if err != nil {
-				return response, pkgError.InternalServerError(fmt.Sprintf("failed to convert WebP to PNG %v", err))
-			}
-			imageData = pngBuffer.Bytes()
-		}
-
-		oriImagePath = fmt.Sprintf("%s/%s", config.PathSendItems, fileName)
-		imageName = fileName
-		err = os.WriteFile(oriImagePath, imageData, 0644)
-		if err != nil {
-			return response, pkgError.InternalServerError(fmt.Sprintf("failed to save downloaded image %v", err))
-		}
+		deletedItems = append(deletedItems, oriImagePath)
+		imageName = filepath.Base(oriImagePath) // Extract name from temp path
 	} else if request.Image != nil {
-		// Save image to server
+		// Save image to server from multipart file
 		oriImagePath = fmt.Sprintf("%s/%s", config.PathSendItems, request.Image.Filename)
 		err = fasthttp.SaveMultipartFile(request.Image, oriImagePath)
 		if err != nil {
-			return response, err
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to save uploaded image: %v", err))
 		}
+		deletedItems = append(deletedItems, oriImagePath)
 		imageName = request.Image.Filename
+	} else {
+		// This should not happen due to validation, but guard anyway
+		return response, pkgError.ValidationError("either Image (file), ImageURL, or ImagePath (base64) must be provided")
 	}
-	deletedItems = append(deletedItems, oriImagePath)
 
 	/* Generate thumbnail with smalled image size */
 	srcImage, err := imaging.Open(oriImagePath)
@@ -337,7 +372,8 @@ func (service serviceSend) SendImage(ctx context.Context, request domainSend.Ima
 		if msg.ImageMessage.ContextInfo == nil {
 			msg.ImageMessage.ContextInfo = &waE2E.ContextInfo{}
 		}
-		msg.ImageMessage.ContextInfo.Expiration = proto.Uint32(uint32(*request.BaseRequest.Duration))
+		mappedExpiration := mapDurationToWhatsAppExpiration(*request.BaseRequest.Duration)
+		msg.ImageMessage.ContextInfo.Expiration = proto.Uint32(mappedExpiration)
 	}
 
 	caption := "🖼️ Image"
@@ -376,9 +412,59 @@ func (service serviceSend) SendFile(ctx context.Context, request domainSend.File
 		return response, err
 	}
 
-	fileBytes := helpers.MultipartFormFileHeaderToBytes(request.File)
-	fileMimeType := resolveDocumentMIME(request.File.Filename, fileBytes)
+	var (
+		fileBytes    []byte
+		fileMimeType string
+		filename     string
+		deletedItems []string
+		tempFilePath string // To store path of downloaded/decoded file
+	)
 
+	// Ensure temporary files are always removed, even on early returns
+	defer func() {
+		if len(deletedItems) > 0 {
+			go utils.RemoveFile(1, deletedItems...)
+		}
+	}()
+
+	if request.FilePath != nil && *request.FilePath != "" {
+		// Decode Base64 file
+		tempFilePath, err = decodeBase64ToTempFile(ctx, *request.FilePath, "file", "bin") // generic binary extension
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to decode base64 file: %v", err))
+		}
+		deletedItems = append(deletedItems, tempFilePath)
+		fileBytes, err = os.ReadFile(tempFilePath)
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to read decoded file: %v", err))
+		}
+		filename = filepath.Base(tempFilePath) // Use temp filename as base
+	} else if request.FileURL != nil && *request.FileURL != "" {
+		// Download file from URL
+		downloadedPath, errDownload := downloadMediaToTempFile(ctx, *request.FileURL, "file", "bin") // generic binary extension
+		if errDownload != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to download file from URL: %v", errDownload))
+		}
+		deletedItems = append(deletedItems, downloadedPath)
+		fileBytes, err = os.ReadFile(downloadedPath)
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to read downloaded file: %v", err))
+		}
+		filename = filepath.Base(downloadedPath) // Use temp filename as base
+	} else if request.File != nil {
+		// Use uploaded multipart file
+		fileBytes = helpers.MultipartFormFileHeaderToBytes(request.File)
+		filename = request.File.Filename
+	} else {
+		return response, pkgError.ValidationError("either File (multipart), FileURL, or FilePath (base64) must be provided")
+	}
+
+	fileMimeType = resolveDocumentMIME(filename, fileBytes)
+
+	finalFileName := filename
+	if request.FileName != nil && *request.FileName != "" {
+		finalFileName = *request.FileName
+	}
 	// Send to WA server
 	uploadedFile, err := service.uploadMedia(ctx, client, whatsmeow.MediaDocument, fileBytes, dataWaRecipient)
 	if err != nil {
@@ -389,11 +475,11 @@ func (service serviceSend) SendFile(ctx context.Context, request domainSend.File
 	msg := &waE2E.Message{DocumentMessage: &waE2E.DocumentMessage{
 		URL:           proto.String(uploadedFile.URL),
 		Mimetype:      proto.String(fileMimeType),
-		Title:         proto.String(request.File.Filename),
+		Title:         proto.String(request.Caption), // Use caption as title for files
 		FileSHA256:    uploadedFile.FileSHA256,
 		FileLength:    proto.Uint64(uploadedFile.FileLength),
 		MediaKey:      uploadedFile.MediaKey,
-		FileName:      proto.String(request.File.Filename),
+		FileName:      proto.String(finalFileName), // Use resolved filename
 		FileEncSHA256: uploadedFile.FileEncSHA256,
 		DirectPath:    proto.String(uploadedFile.DirectPath),
 		Caption:       proto.String(request.Caption),
@@ -410,7 +496,8 @@ func (service serviceSend) SendFile(ctx context.Context, request domainSend.File
 		if msg.DocumentMessage.ContextInfo == nil {
 			msg.DocumentMessage.ContextInfo = &waE2E.ContextInfo{}
 		}
-		msg.DocumentMessage.ContextInfo.Expiration = proto.Uint32(uint32(*request.BaseRequest.Duration))
+		mappedExpiration := mapDurationToWhatsAppExpiration(*request.BaseRequest.Duration)
+		msg.DocumentMessage.ContextInfo.Expiration = proto.Uint32(mappedExpiration)
 	}
 
 	caption := "📄 Document"
@@ -629,28 +716,30 @@ func (service serviceSend) SendVideo(ctx context.Context, request domainSend.Vid
 
 	var oriVideoPath string
 
-	// Determine source of video (URL or uploaded file)
-	if request.VideoURL != nil && *request.VideoURL != "" {
-		// Download video bytes
-		videoBytes, fileName, errDownload := utils.DownloadVideoFromURL(*request.VideoURL)
-		if errDownload != nil {
-			return response, pkgError.InternalServerError(fmt.Sprintf("failed to download video from URL %v", errDownload))
+	// Determine source of video (Base64, URL, or uploaded file)
+	if request.VideoPath != nil && *request.VideoPath != "" {
+		oriVideoPath, err = decodeBase64ToTempFile(ctx, *request.VideoPath, "video", "mp4") // Assuming MP4
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to decode base64 video: %v", err))
 		}
-		// Build file path to save the downloaded video temporarily
-		oriVideoPath = fmt.Sprintf("%s/%s", config.PathSendItems, generateUUID+fileName)
-		if errWrite := os.WriteFile(oriVideoPath, videoBytes, 0644); errWrite != nil {
-			return response, pkgError.InternalServerError(fmt.Sprintf("failed to store downloaded video in server %v", errWrite))
+		deletedItems = append(deletedItems, oriVideoPath)
+	} else if request.VideoURL != nil && *request.VideoURL != "" {
+		oriVideoPath, err = downloadMediaToTempFile(ctx, *request.VideoURL, "video", "mp4") // Assuming MP4
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to download video from URL: %v", err))
 		}
+		deletedItems = append(deletedItems, oriVideoPath)
 	} else if request.Video != nil {
 		// Save uploaded video to server
 		oriVideoPath = fmt.Sprintf("%s/%s", config.PathSendItems, generateUUID+request.Video.Filename)
 		err = fasthttp.SaveMultipartFile(request.Video, oriVideoPath)
 		if err != nil {
-			return response, pkgError.InternalServerError(fmt.Sprintf("failed to store video in server %v", err))
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to store video in server: %v", err))
 		}
+		deletedItems = append(deletedItems, oriVideoPath)
 	} else {
 		// This should not happen due to validation, but guard anyway
-		return response, pkgError.ValidationError("either Video or VideoURL must be provided")
+		return response, pkgError.ValidationError("either Video (file), VideoURL, or VideoPath (base64) must be provided")
 	}
 
 	// Check if ffmpeg is installed
@@ -759,7 +848,8 @@ func (service serviceSend) SendVideo(ctx context.Context, request domainSend.Vid
 		if msg.VideoMessage.ContextInfo == nil {
 			msg.VideoMessage.ContextInfo = &waE2E.ContextInfo{}
 		}
-		msg.VideoMessage.ContextInfo.Expiration = proto.Uint32(uint32(*request.BaseRequest.Duration))
+		mappedExpiration := mapDurationToWhatsAppExpiration(*request.BaseRequest.Duration)
+		msg.VideoMessage.ContextInfo.Expiration = proto.Uint32(mappedExpiration)
 	}
 
 	caption := "🎥 Video"
@@ -810,7 +900,8 @@ func (service serviceSend) SendContact(ctx context.Context, request domainSend.C
 		if msg.ContactMessage.ContextInfo == nil {
 			msg.ContactMessage.ContextInfo = &waE2E.ContextInfo{}
 		}
-		msg.ContactMessage.ContextInfo.Expiration = proto.Uint32(uint32(*request.BaseRequest.Duration))
+		mappedExpiration := mapDurationToWhatsAppExpiration(*request.BaseRequest.Duration)
+		msg.ContactMessage.ContextInfo.Expiration = proto.Uint32(mappedExpiration)
 	}
 
 	content := "👤 " + request.ContactName
@@ -873,7 +964,8 @@ func (service serviceSend) SendLink(ctx context.Context, request domainSend.Link
 		if msg.ExtendedTextMessage.ContextInfo == nil {
 			msg.ExtendedTextMessage.ContextInfo = &waE2E.ContextInfo{}
 		}
-		msg.ExtendedTextMessage.ContextInfo.Expiration = proto.Uint32(uint32(*request.BaseRequest.Duration))
+		mappedExpiration := mapDurationToWhatsAppExpiration(*request.BaseRequest.Duration)
+		msg.ExtendedTextMessage.ContextInfo.Expiration = proto.Uint32(mappedExpiration)
 	}
 
 	// If we have a thumbnail image, upload it to WhatsApp's servers
@@ -941,7 +1033,8 @@ func (service serviceSend) SendLocation(ctx context.Context, request domainSend.
 		if msg.LocationMessage.ContextInfo == nil {
 			msg.LocationMessage.ContextInfo = &waE2E.ContextInfo{}
 		}
-		msg.LocationMessage.ContextInfo.Expiration = proto.Uint32(uint32(*request.BaseRequest.Duration))
+		mappedExpiration := mapDurationToWhatsAppExpiration(*request.BaseRequest.Duration)
+		msg.LocationMessage.ContextInfo.Expiration = proto.Uint32(mappedExpiration)
 	}
 
 	content := "📍 " + request.Latitude + ", " + request.Longitude
@@ -983,12 +1076,45 @@ func (service serviceSend) SendAudio(ctx context.Context, request domainSend.Aud
 		deleteTempFile  bool
 	)
 
-	// Handle audio from URL or file
-	if request.AudioURL != nil && *request.AudioURL != "" {
-		audioBytes, audioFilename, err = utils.DownloadAudioFromURL(*request.AudioURL)
-		if err != nil {
-			return response, pkgError.InternalServerError(fmt.Sprintf("failed to download audio from URL %v", err))
+	// Ensure temp file is cleaned up if created
+	defer func() {
+		if deleteTempFile {
+			if err := os.Remove(tempAudioPath); err != nil {
+				logrus.Warnf("Failed to cleanup temporary audio file %s: %v", tempAudioPath, err)
+			}
 		}
+	}()
+
+	// Handle audio from Base64, URL or file
+	if request.AudioPath != nil && *request.AudioPath != "" {
+		tempAudioPath, err = decodeBase64ToTempFile(ctx, *request.AudioPath, "audio", "ogg") // Assuming ogg for audio
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to decode base64 audio: %v", err))
+		}
+		deleteTempFile = true
+		audioBytes, err = os.ReadFile(tempAudioPath)
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to read decoded audio file: %v", err))
+		}
+		audioFilename = filepath.Base(tempAudioPath)
+		audioMimeType = resolveAudioMIME(audioFilename, audioBytes)
+		audioDuration = getAudioDuration(tempAudioPath)
+	} else if request.AudioURL != nil && *request.AudioURL != "" {
+		tempAudioPath, err = downloadMediaToTempFile(ctx, *request.AudioURL, "audio", "ogg") // Assuming ogg
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to download audio from URL: %v", err))
+		}
+		deleteTempFile = true
+		audioBytes, err = os.ReadFile(tempAudioPath)
+		if err != nil {
+			return response, pkgError.InternalServerError(fmt.Sprintf("failed to read downloaded audio file: %v", err))
+		}
+		audioFilename = filepath.Base(tempAudioPath)
+		audioMimeType = resolveAudioMIME(audioFilename, audioBytes)
+		audioDuration = getAudioDuration(tempAudioPath)
+	} else if request.Audio != nil {
+		audioBytes = helpers.MultipartFormFileHeaderToBytes(request.Audio)
+		audioFilename = request.Audio.Filename
 		audioMimeType = resolveAudioMIME(audioFilename, audioBytes)
 
 		// Save to temp file to get duration
@@ -997,21 +1123,8 @@ func (service serviceSend) SendAudio(ctx context.Context, request domainSend.Aud
 			deleteTempFile = true
 			audioDuration = getAudioDuration(tempAudioPath)
 		}
-	} else if request.Audio != nil {
-		audioBytes = helpers.MultipartFormFileHeaderToBytes(request.Audio)
-		audioMimeType = resolveAudioMIME(request.Audio.Filename, audioBytes)
-
-		// Save to temp file to get duration
-		tempAudioPath = fmt.Sprintf("%s/temp_audio_%s", config.PathSendItems, fiberUtils.UUIDv4()+filepath.Ext(request.Audio.Filename))
-		if err = os.WriteFile(tempAudioPath, audioBytes, 0644); err == nil {
-			deleteTempFile = true
-			audioDuration = getAudioDuration(tempAudioPath)
-		}
-	}
-
-	// Clean up temp file
-	if deleteTempFile {
-		defer os.Remove(tempAudioPath)
+	} else {
+		return response, pkgError.ValidationError("either Audio (file), AudioURL, or AudioPath (base64) must be provided")
 	}
 
 	// For PTT (voice notes), WhatsApp requires "audio/ogg; codecs=opus"
@@ -1059,7 +1172,8 @@ func (service serviceSend) SendAudio(ctx context.Context, request domainSend.Aud
 		if msg.AudioMessage.ContextInfo == nil {
 			msg.AudioMessage.ContextInfo = &waE2E.ContextInfo{}
 		}
-		msg.AudioMessage.ContextInfo.Expiration = proto.Uint32(uint32(*request.BaseRequest.Duration))
+		mappedExpiration := mapDurationToWhatsAppExpiration(*request.BaseRequest.Duration)
+		msg.AudioMessage.ContextInfo.Expiration = proto.Uint32(mappedExpiration)
 	}
 
 	content := "🎵 Audio"
@@ -1098,7 +1212,8 @@ func (service serviceSend) SendPoll(ctx context.Context, request domainSend.Poll
 		if msg.PollCreationMessage.ContextInfo == nil {
 			msg.PollCreationMessage.ContextInfo = &waE2E.ContextInfo{}
 		}
-		msg.PollCreationMessage.ContextInfo.Expiration = proto.Uint32(uint32(*request.BaseRequest.Duration))
+		mappedExpiration := mapDurationToWhatsAppExpiration(*request.BaseRequest.Duration)
+		msg.PollCreationMessage.ContextInfo.Expiration = proto.Uint32(mappedExpiration)
 	}
 
 	ts, err := service.wrapSendMessage(ctx, client, dataWaRecipient, msg, content)
@@ -1159,21 +1274,29 @@ func (service serviceSend) SendChatPresence(ctx context.Context, request domainS
 	var presenceType types.ChatPresence
 	var messageID string
 	var statusMessage string
+	var mediaType types.ChatPresenceMedia // Adicionado
 
 	switch request.Action {
 	case "start":
 		presenceType = types.ChatPresenceComposing
 		messageID = "chat-presence-start"
 		statusMessage = fmt.Sprintf("Send chat presence start typing success %s", request.Phone)
+		mediaType = types.ChatPresenceMediaText // Explicitamente texto
 	case "stop":
 		presenceType = types.ChatPresencePaused
 		messageID = "chat-presence-stop"
 		statusMessage = fmt.Sprintf("Send chat presence stop typing success %s", request.Phone)
+		mediaType = types.ChatPresenceMediaText // Explicitamente texto
+	case "recording":
+		presenceType = types.ChatPresenceComposing // Ou Paused, mas Composing é mais comum para "ativa"
+		messageID = "chat-presence-recording"
+		statusMessage = fmt.Sprintf("Send chat presence recording success %s", request.Phone)
+		mediaType = types.ChatPresenceMediaAudio // Aqui está a diferença!
 	default:
-		return response, fmt.Errorf("invalid action: %s. Must be 'start' or 'stop'", request.Action)
+		return response, fmt.Errorf("invalid action: %s. Must be 'start', 'stop' or 'recording'", request.Action)
 	}
 
-	err = client.SendChatPresence(ctx, userJid, presenceType, types.ChatPresenceMedia(""))
+	err = client.SendChatPresence(ctx, userJid, presenceType, mediaType) // Usar mediaType aqui
 	if err != nil {
 		return response, err
 	}
@@ -1532,7 +1655,8 @@ func (service serviceSend) SendSticker(ctx context.Context, request domainSend.S
 		if msg.StickerMessage.ContextInfo == nil {
 			msg.StickerMessage.ContextInfo = &waE2E.ContextInfo{}
 		}
-		msg.StickerMessage.ContextInfo.Expiration = proto.Uint32(uint32(*request.BaseRequest.Duration))
+		mappedExpiration := mapDurationToWhatsAppExpiration(*request.BaseRequest.Duration)
+		msg.StickerMessage.ContextInfo.Expiration = proto.Uint32(mappedExpiration)
 	}
 
 	content := "🎨 Sticker"
@@ -1610,3 +1734,147 @@ func (service serviceSend) getDefaultEphemeralExpiration(jid string) (expiration
 
 	return expiration
 }
+
+// downloadMediaToTempFile downloads content from a URL to a temporary file.
+func downloadMediaToTempFile(ctx context.Context, url, prefix, extension string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to download media from URL: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to download media, status code: %d", resp.StatusCode)
+	}
+
+	tempFile, err := os.CreateTemp(config.PathSendItems, prefix+"_*."+extension)
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer tempFile.Close()
+
+	_, err = io.Copy(tempFile, resp.Body)
+	if err != nil {
+		os.Remove(tempFile.Name()) // Clean up on error
+		return "", fmt.Errorf("failed to write media to temp file: %w", err)
+	}
+
+	return tempFile.Name(), nil
+}
+
+// decodeBase64ToTempFile decodes a Base64 string to a temporary file.
+func decodeBase64ToTempFile(ctx context.Context, base64Data, prefix, extension string) (string, error) {
+	decoded, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode base64 string: %w", err)
+	}
+
+	tempFile, err := os.CreateTemp(config.PathSendItems, prefix+"_*."+extension)
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer tempFile.Close()
+
+	_, err = tempFile.Write(decoded)
+	if err != nil {
+		os.Remove(tempFile.Name()) // Clean up on error
+		return "", fmt.Errorf("failed to write decoded base64 to temp file: %w", err)
+	}
+
+	return tempFile.Name(), nil
+}
+
+// mapDurationToWhatsAppExpiration maps a requested duration (in seconds) to the closest
+// WhatsApp-supported disappearing message expiration value.
+// WhatsApp only supports 0 (off), 86400 (24 hours), 604800 (7 days), and 7776000 (90 days).
+func mapDurationToWhatsAppExpiration(requestedDuration int) uint32 {
+	if requestedDuration == 0 {
+		return 0 // No expiry
+	}
+
+	// Sort supported durations for easier mapping
+	supported := []uint32{86400, 604800, 7776000} // 24h, 7d, 90d
+
+	// Find the smallest supported duration that is greater than or equal to the requested duration
+	for _, s := range supported {
+		if uint32(requestedDuration) <= s {
+			return s
+		}
+	}
+
+	// If requested duration is greater than all supported, default to 90 days
+	return 7776000 // 90 days
+}
+
+// buildQuotedMessage reconstructs a waE2E.Message for quoting based on stored Message data.
+func (service serviceSend) buildQuotedMessage(originalMsg *domainChatStorage.Message) *waE2E.Message {
+	if originalMsg == nil {
+		return nil
+	}
+
+	quoted := &waE2E.Message{}
+
+	switch originalMsg.MediaType {
+	case "image":
+		quoted.ImageMessage = &waE2E.ImageMessage{
+			URL:           proto.String(originalMsg.URL),
+			DirectPath:    proto.String(originalMsg.URL), // Use URL as DirectPath
+			MediaKey:      originalMsg.MediaKey,
+			Mimetype:      proto.String(originalMsg.MediaType), // Re-use MediaType as Mimetype
+			FileEncSHA256: originalMsg.FileEncSHA256,
+			FileSHA256:    originalMsg.FileSHA256,
+			FileLength:    proto.Uint64(originalMsg.FileLength),
+			Caption:       proto.String(originalMsg.Content), // Content can be caption
+		}
+	case "video":
+		quoted.VideoMessage = &waE2E.VideoMessage{
+			URL:           proto.String(originalMsg.URL),
+			DirectPath:    proto.String(originalMsg.URL), // Use URL as DirectPath
+			MediaKey:      originalMsg.MediaKey,
+			Mimetype:      proto.String(originalMsg.MediaType),
+			FileEncSHA256: originalMsg.FileEncSHA256,
+			FileSHA256:    originalMsg.FileSHA256,
+			FileLength:    proto.Uint64(originalMsg.FileLength),
+			Caption:       proto.String(originalMsg.Content),
+		}
+	case "audio":
+		quoted.AudioMessage = &waE2E.AudioMessage{
+			URL:           proto.String(originalMsg.URL),
+			DirectPath:    proto.String(originalMsg.URL), // Use URL as DirectPath
+			MediaKey:      originalMsg.MediaKey,
+			Mimetype:      proto.String(originalMsg.MediaType),
+			FileEncSHA256: originalMsg.FileEncSHA256,
+			FileSHA256:    originalMsg.FileSHA256,
+			FileLength:    proto.Uint64(originalMsg.FileLength),
+		}
+	case "document":
+		quoted.DocumentMessage = &waE2E.DocumentMessage{
+			URL:           proto.String(originalMsg.URL),
+			DirectPath:    proto.String(originalMsg.URL), // Use URL as DirectPath
+			MediaKey:      originalMsg.MediaKey,
+			Mimetype:      proto.String(originalMsg.MediaType),
+			FileEncSHA256: originalMsg.FileEncSHA256,
+			FileSHA256:    originalMsg.FileSHA256,
+			FileLength:    proto.Uint64(originalMsg.FileLength),
+			FileName:      proto.String(originalMsg.Filename),
+			Caption:       proto.String(originalMsg.Content),
+		}
+	default: // Default to ExtendedTextMessage or ConversationMessage for text
+		if originalMsg.Content != "" {
+			quoted.ExtendedTextMessage = &waE2E.ExtendedTextMessage{
+				Text: proto.String(originalMsg.Content),
+			}
+		} else {
+			// Fallback if no specific type or content
+			quoted.Conversation = proto.String("") // Empty conversation to avoid nil pointer
+		}
+	}
+	return quoted
+}
+
+

@@ -50,7 +50,7 @@ export default {
 
             try {
                 await this.submitApi();
-                showSuccessInfo("Avatar fetched")
+                showSuccessInfo("Avatar obtido")
             } catch (err) {
                 showErrorInfo(err)
             }
@@ -78,10 +78,10 @@ export default {
     template: `
     <div class="olive card" @click="openModal" style="cursor: pointer;">
         <div class="content">
-        <a class="ui olive right ribbon label">Account</a>
+        <a class="ui olive right ribbon label">Conta</a>
             <div class="header">Avatar</div>
             <div class="description">
-                You can search someone avatar by phone
+                Você pode procurar o avatar de alguém pelo telefone
             </div>
         </div>
     </div>
@@ -90,36 +90,36 @@ export default {
     <div class="ui small modal" id="modalUserAvatar">
         <i class="close icon"></i>
         <div class="header">
-            Search User Avatar
+            Buscar Avatar do Usuário
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone"/>
 
                 <div class="field">
-                    <label>Preview</label>
+                    <label>Pré-visualização</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="compress" v-model="is_preview">
-                        <label>Check for small size image</label>
+                        <label>Verificar por imagem de tamanho pequeno</label>
                     </div>
                 </div>
 
                 <div class="field" v-if="isGroupType">
-                    <label>Community</label>
+                    <label>Comunidade</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="compress" v-model="is_community">
-                        <label>Check if it's a community group</label>
+                        <label>Verificar se é um grupo de comunidade</label>
                     </div>
                 </div>
 
                 <button type="button" class="ui primary button" :class="{'loading': loading, 'disabled': !this.isValidForm() || this.loading}"
                         @click.prevent="handleSubmit">
-                    Search
+                    Buscar
                 </button>
             </form>
 
             <div v-if="image != null" class="center">
-                <img :src="image" alt="profile picture" style="padding-top: 10px; max-height: 200px">
+                <img :src="image" alt="foto de perfil" style="padding-top: 10px; max-height: 200px">
             </div>
         </div>
     </div>

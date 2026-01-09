@@ -56,10 +56,10 @@ export default {
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
-            <a class="ui green right ribbon label">Group</a>
-            <div class="header">Set Group Topic</div>
+            <a class="ui green right ribbon label">Grupo</a>
+            <div class="header">Definir Tópico do Grupo</div>
             <div class="description">
-                Set or remove group description/topic
+                Definir ou remover descrição/tópico do grupo
             </div>
         </div>
     </div>
@@ -68,25 +68,25 @@ export default {
     <div class="ui small modal" id="modalGroupSetTopic">
         <i class="close icon"></i>
         <div class="header">
-            Set Group Topic
+            Definir Tópico do Grupo
         </div>
         <div class="content">
             <form class="ui form">
                 <div class="field">
-                    <label>Group ID</label>
+                    <label>ID do Grupo</label>
                     <input v-model="groupId" type="text"
                            placeholder="120363024512399999@g.us"
                            aria-label="Group ID">
                 </div>
                 
                 <div class="field">
-                    <label>Group Topic (Description)</label>
+                    <label>Tópico do Grupo (Descrição)</label>
                     <textarea v-model="topic" 
-                              placeholder="Enter group description/topic... Leave empty to remove topic."
+                              placeholder="Insira a descrição/tópico do grupo... Deixe vazio para remover o tópico."
                               rows="4"
                               aria-label="Group Topic">
                     </textarea>
-                    <small class="text">This will be displayed as the group description. Leave empty to remove the current topic.</small>
+                    <small class="text">Isso será exibido como a descrição do grupo. Deixe em branco para remover o tópico atual.</small>
                 </div>
             </form>
         </div>
@@ -94,7 +94,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                     :class="{'loading': this.loading, 'disabled': !this.isValidForm() || this.loading}"
                     @click.prevent="handleSubmit" type="button">
-                {{ topic.trim() === '' ? 'Remove Topic' : 'Update Topic' }}
+                {{ topic.trim() === '' ? 'Remover Tópico' : 'Atualizar Tópico' }}
                 <i :class="topic.trim() === '' ? 'trash icon' : 'edit icon'"></i>
             </button>
         </div>

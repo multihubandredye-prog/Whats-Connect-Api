@@ -4,9 +4,9 @@ export default {
         async handleSubmit() {
             try {
                 await this.submitApi()
-                showSuccessInfo("Reconnect success")
+                showSuccessInfo("Reconexão bem-sucedida")
 
-                // fetch devices
+                // buscar dispositivos
                 this.$emit('reload-devices')
             } catch (err) {
                 showErrorInfo(err)
@@ -27,9 +27,9 @@ export default {
     <div class="green card" @click="handleSubmit" style="cursor: pointer">
         <div class="content">
             <a class="ui teal right ribbon label">App</a>
-            <div class="header">Reconnect</div>
+            <div class="header">Reconectar</div>
             <div class="description">
-                Please reconnect to the WhatsApp service if your API doesn't work or if your app is down.
+                Por favor, reconecte-se ao serviço do WhatsApp se sua API não funcionar ou se seu aplicativo estiver inativo.
             </div>
         </div>
     </div>

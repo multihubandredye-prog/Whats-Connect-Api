@@ -102,10 +102,10 @@ export default {
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
-            <a class="ui green right ribbon label">Group</a>
-            <div class="header">Manage Participants</div>
+            <a class="ui green right ribbon label">Grupo</a>
+            <div class="header">Gerenciar Participantes</div>
             <div class="description">
-                Add/Remove/Promote/Demote Participants
+                Adicionar/Remover/Promover/Rebaixar Participantes
             </div>
         </div>
     </div>
@@ -114,12 +114,12 @@ export default {
     <div class="ui small modal" id="modalGroupAddParticipant">
         <i class="close icon"></i>
         <div class="header">
-            Manage Participants
+            Gerenciar Participantes
         </div>
         <div class="content">
             <form class="ui form">
                 <div class="field">
-                    <label>Group ID</label>
+                    <label>ID do Grupo</label>
                     <input v-model="group" type="text"
                            placeholder="12036322888236XXXX..."
                            aria-label="Group Name">
@@ -127,10 +127,10 @@ export default {
                 </div>
                 
                 <div class="field">
-                    <label>Participants</label>
+                    <label>Participantes</label>
                     <div style="display: flex; flex-direction: column; gap: 5px">
                         <div class="ui action input" :key="index" v-for="(participant, index) in participants">
-                            <input type="number" placeholder="Phone Int Number (6289...)" v-model="participants[index]"
+                            <input type="number" placeholder="Número de Telefone Internacional (6289...)" v-model="participants[index]"
                                    aria-label="list participant">
                             <button class="ui button" @click="handleDeleteParticipant(index)" type="button">
                                 <i class="minus circle icon"></i>
@@ -139,7 +139,7 @@ export default {
                         <div class="field" style="display: flex; flex-direction: column; gap: 3px">
                             <div>
                                 <button class="mini ui primary button" @click="handleAddParticipant" type="button">
-                                    <i class="plus icon"></i> Option
+                                    <i class="plus icon"></i> Adicionar Participante
                                 </button>
                             </div>
                         </div>
@@ -147,12 +147,12 @@ export default {
                 </div>
                 
                 <div class="field">
-                    <label>Action</label>
+                    <label>Ação</label>
                     <select v-model="action" class="ui dropdown" aria-label="Action">
-                        <option value="add">Add to group</option>
-                        <option value="remove">Remove from group</option>
-                        <option value="promote">Promote to admin</option>
-                        <option value="demote">Demote from admin</option>
+                        <option value="add">Adicionar ao grupo</option>
+                        <option value="remove">Remover do grupo</option>
+                        <option value="promote">Promover a administrador</option>
+                        <option value="demote">Rebaixar de administrador</option>
                     </select>
                 </div>
             </form>
@@ -160,7 +160,7 @@ export default {
         <div class="actions">
             <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': !this.isValidForm() || this.loading}"
                  @click.prevent="handleSubmit" type="button">
-                Submit
+                Enviar
                 <i class="send icon"></i>
             </button>
         </div>

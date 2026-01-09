@@ -9,7 +9,7 @@ export default {
         return {
             type: window.TYPEUSER,
             phone: '',
-            timerSeconds: 86400, // Default to 24 hours
+            timerSeconds: 86400, // Padrão para 24 horas
             loading: false,
         }
     },
@@ -19,12 +19,12 @@ export default {
         },
         timerLabel() {
             const labels = {
-                0: 'Off',
-                86400: '24 hours',
-                604800: '7 days',
-                7776000: '90 days'
+                0: 'Desativado',
+                86400: '24 horas',
+                604800: '7 dias',
+                7776000: '90 dias'
             };
-            return labels[this.timerSeconds] || 'Unknown';
+            return labels[this.timerSeconds] || 'Desconhecido';
         }
     },
     methods: {
@@ -79,9 +79,9 @@ export default {
     <div class="purple card" @click="openModal()" style="cursor: pointer">
         <div class="content">
             <a class="ui purple right ribbon label">Chat</a>
-            <div class="header">Disappearing Messages</div>
+            <div class="header">Mensagens Temporárias</div>
             <div class="description">
-                Set auto-delete timer for chat messages
+                Definir temporizador de autoexclusão para mensagens de chat
             </div>
         </div>
     </div>
@@ -90,27 +90,27 @@ export default {
     <div class="ui small modal" id="modalChatDisappearing">
         <i class="close icon"></i>
         <div class="header">
-            <i class="clock outline icon"></i> Disappearing Messages
+            <i class="clock outline icon"></i> Mensagens Temporárias
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone" :show-status="false"/>
                 <div class="field">
-                    <label>Timer Duration</label>
+                    <label>Duração do Temporizador</label>
                     <select class="ui dropdown" v-model="timerSeconds">
-                        <option :value="0">Off (disabled)</option>
-                        <option :value="86400">24 hours</option>
-                        <option :value="604800">7 days</option>
-                        <option :value="7776000">90 days</option>
+                        <option :value="0">Desativado (desabilitado)</option>
+                        <option :value="86400">24 horas</option>
+                        <option :value="604800">7 dias</option>
+                        <option :value="7776000">90 dias</option>
                     </select>
                 </div>
                 <div class="ui info message" v-if="timerSeconds > 0">
                     <i class="info circle icon"></i>
-                    Messages will disappear after <strong>{{ timerLabel }}</strong>
+                    As mensagens desaparecerão após <strong>{{ timerLabel }}</strong>
                 </div>
                 <div class="ui warning message" v-else>
                     <i class="exclamation triangle icon"></i>
-                    Disappearing messages will be <strong>disabled</strong>
+                    As mensagens temporárias serão <strong>desabilitadas</strong>
                 </div>
             </form>
         </div>
@@ -118,7 +118,7 @@ export default {
             <button class="ui approve positive right labeled icon button" 
                  :class="{'disabled': !isValidForm() || loading, 'loading': loading}"
                  @click.prevent="handleSubmit">
-                {{ timerSeconds === 0 ? 'Disable Timer' : 'Set Timer' }}
+                {{ timerSeconds === 0 ? 'Desativar Temporizador' : 'Definir Temporizador' }}
                 <i class="clock icon"></i>
             </button>
         </div>

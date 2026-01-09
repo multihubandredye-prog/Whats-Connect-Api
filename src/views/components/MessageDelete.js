@@ -78,10 +78,10 @@ export default {
     template: `
     <div class="red card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui red right ribbon label">Message</a>
-            <div class="header">Delete Message</div>
+            <a class="ui red right ribbon label">Mensagem</a>
+            <div class="header">Excluir Mensagem</div>
             <div class="description">
-                Delete your sent message
+                Exclua a mensagem que você enviou
             </div>
         </div>
     </div>
@@ -90,15 +90,15 @@ export default {
     <div class="ui small modal" id="modalMessageDelete">
         <i class="close icon"></i>
         <div class="header">
-            Delete Message
+            Excluir Mensagem
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone"/>
                 
                 <div class="field">
-                    <label>Message ID</label>
-                    <input v-model="message_id" type="text" placeholder="Please enter your message id"
+                    <label>ID da Mensagem</label>
+                    <input v-model="message_id" type="text" placeholder="Por favor, insira o ID da sua mensagem"
                            aria-label="message id">
                 </div>
             </form>
@@ -106,7 +106,7 @@ export default {
         <div class="actions">
             <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Delete
+                Excluir
                 <i class="send icon"></i>
             </button>
         </div>

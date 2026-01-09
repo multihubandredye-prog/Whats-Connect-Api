@@ -45,6 +45,12 @@ export default {
                 return false;
             }
 
+            // Validate duration
+            if (this.duration !== 0 && (this.duration < 86400 || this.duration > 7776000)) {
+                showErrorInfo("Duração inválida. Use 0 para sem expiração, ou entre 24 horas (86400s) e 90 dias (7776000s).");
+                return false;
+            }
+
             return true;
         },
         async handleSubmit() {
@@ -94,10 +100,10 @@ export default {
     template: `
     <div class="blue card" @click="openModal()" style="cursor: pointer">
         <div class="content">
-            <a class="ui blue right ribbon label">Send</a>
-            <div class="header">Send Contact</div>
+            <a class="ui blue right ribbon label">Enviar</a>
+            <div class="header">Enviar Contato</div>
             <div class="description">
-                Send contact to user or group
+                Enviar contato para usuário ou grupo
             </div>
         </div>
     </div>
@@ -106,39 +112,39 @@ export default {
     <div class="ui small modal" id="modalSendContact">
         <i class="close icon"></i>
         <div class="header">
-            Send Contact
+            Enviar Contato
         </div>
         <div class="content">
             <form class="ui form">
                 <FormRecipient v-model:type="type" v-model:phone="phone"/>
                 
                 <div class="field">
-                    <label>Contact Name</label>
-                    <input v-model="card_name" type="text" placeholder="Please enter contact name"
+                    <label>Nome do Contato</label>
+                    <input v-model="card_name" type="text" placeholder="Por favor, insira o nome do contato"
                            aria-label="contact name">
                 </div>
                 <div class="field">
-                    <label>Contact Phone</label>
-                    <input v-model="card_phone" type="text" placeholder="Please enter contact phone"
+                    <label>Telefone do Contato</label>
+                    <input v-model="card_phone" type="text" placeholder="Por favor, insira o telefone do contato"
                            aria-label="contact phone">
                 </div>
                 <div class="field" v-if="isShowAttributes()">
-                    <label>Is Forwarded</label>
+                    <label>É Encaminhada</label>
                     <div class="ui toggle checkbox">
                         <input type="checkbox" aria-label="is forwarded" v-model="is_forwarded">
-                        <label>Mark contact as forwarded</label>
+                        <label>Marcar contato como encaminhado</label>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Disappearing Duration (seconds)</label>
-                    <input v-model.number="duration" type="number" min="0" placeholder="0 (no expiry)" aria-label="duration"/>
+                    <label>Duração de Mensagem Temporária (segundos)</label>
+                    <input v-model.number="duration" type="number" min="0" max="7776000" placeholder="0 (sem expiração), 24h a 90d" aria-label="duration"/>
                 </div>
             </form>
         </div>
         <div class="actions">
             <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
                  @click.prevent="handleSubmit">
-                Send
+                Enviar
                 <i class="send icon"></i>
             </button>
         </div>

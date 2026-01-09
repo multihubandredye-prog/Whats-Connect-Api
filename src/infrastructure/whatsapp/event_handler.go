@@ -55,6 +55,10 @@ func handler(ctx context.Context, instance *DeviceInstance, rawEvt any) {
 		handleAppState(ctx, evt)
 	case *events.GroupInfo:
 		handleGroupInfo(ctx, evt, instance.JID(), client)
+	case *events.CallOffer: // Handle incoming call offers
+		handleCallOfferEvent(ctx, evt, instance.JID(), client)
+	case *events.CallTerminate: // Handle call termination
+		handleCallTerminateEvent(ctx, evt, instance.JID(), client)
 	}
 
 	instance.UpdateStateFromClient()
@@ -254,5 +258,164 @@ func handleGroupInfo(ctx context.Context, evt *events.GroupInfo, deviceID string
 				logrus.Errorf("Failed to forward group info event to webhook: %v", err)
 			}
 		}(evt, client)
+	}
+}
+
+// handleCallOfferEvent handles incoming call offer events
+func handleCallOfferEvent(ctx context.Context, evt *events.CallOffer, deviceID string, client *whatsmeow.Client) {
+	log.Infof("Received call offer event for device %s: %+v", deviceID, evt)
+
+	// Create top-level payload for webhook
+	outerBody := make(map[string]any)
+	payload := make(map[string]any)
+
+	outerBody["event"] = "call_offer" // Event name for webhook
+	outerBody["device_id"] = deviceID
+
+	// Timestamp consistent with other payloads (RFC3339)
+	outerBody["Timestamp"] = evt.Timestamp.Format(time.RFC3339)
+	payload["Timestamp"] = evt.Timestamp.Format(time.RFC3339) // Also in inner payload for consistency
+
+	payload["Call_ID"] = string(evt.CallID)
+	payload["Call_LID"] = evt.From.String()
+	payload["Port"] = config.AppPort // Add Port from config
+
+	// Determine if it's a group call
+	payload["Is_Group_Call"] = !evt.GroupJID.IsEmpty()
+
+	// Determine From_Me
+	if client.Store.ID != nil && evt.CallCreator == *client.Store.ID {
+		payload["From_Me"] = true
+	} else {
+		payload["From_Me"] = false
+	}
+
+
+	var contactJID types.JID
+	if !evt.CallCreatorAlt.IsEmpty() {
+		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreator, client) // Use NormalizeJIDFromLID
+	} else {
+		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreator, client) // Use NormalizeJIDFromLID
+	}
+
+	payload["Sender_Number_Call"] = contactJID.User // Changed from .User to full JID if possible? Let's keep .User for now if it's the contact's number part.
+	
+	// Try to get PushName
+	contact, err := client.Store.Contacts.GetContact(ctx, contactJID)
+	if err == nil && contact.Found && contact.PushName != "" {
+		payload["Sender_Pushname_Call"] = contact.PushName
+	} else {
+		payload["Sender_Pushname_Call"] = "Unknown"
+	}
+
+	// Receiver pushname
+	if client.Store != nil && client.Store.PushName != "" {
+		payload["Receiver_Pushname_Call"] = client.Store.PushName
+	} else {
+		payload["Receiver_Pushname_Call"] = "Unknown"
+	}
+
+	// Determine call type (video/audio)
+	isVideo := false
+	if evt.Data != nil {
+		for _, child := range evt.Data.GetChildren() {
+			if child.Tag == "video" {
+				isVideo = true
+				break
+			}
+		}
+	}
+	if isVideo {
+		payload["Type_Call"] = "video"
+		payload["Type"] = "video_call_offer_message" // Consistent Type field
+	} else {
+		payload["Type_Call"] = "audio"
+		payload["Type"] = "audio_call_offer_message" // Consistent Type field
+	}
+
+	outerBody["payload"] = payload
+
+	if len(config.WhatsappWebhook) > 0 {
+		go func(body map[string]any) {
+			webhookCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := forwardPayloadToConfiguredWebhooks(webhookCtx, body, "call offer event"); err != nil {
+				log.Errorf("Failed to forward call offer event to webhook: %v", err)
+			}
+		}(outerBody)
+	}
+}
+
+// handleCallTerminateEvent handles call termination events
+func handleCallTerminateEvent(ctx context.Context, evt *events.CallTerminate, deviceID string, client *whatsmeow.Client) {
+	log.Infof("Received call terminate event for device %s: %+v", deviceID, evt)
+
+	outerBody := make(map[string]any)
+	payload := make(map[string]any)
+
+	outerBody["event"] = "call_terminate" // Event name for webhook
+	outerBody["device_id"] = deviceID
+
+	// Timestamp consistent with other payloads (RFC3339)
+	outerBody["Timestamp"] = evt.Timestamp.Format(time.RFC3339)
+	payload["Timestamp"] = evt.Timestamp.Format(time.RFC3339) // Also in inner payload for consistency
+
+	payload["Call_ID"] = evt.CallID
+	payload["Call_LID"] = evt.From.String()
+	payload["Port"] = config.AppPort // Add Port from config
+
+	// Determine From_Me
+	if client.Store.ID != nil && evt.From == *client.Store.ID {
+		payload["From_Me"] = true
+	} else {
+		payload["From_Me"] = false
+	}
+
+
+	// Determine shutdown causer
+	shutdownCauser := evt.Reason
+	if evt.Reason == "rejected_elsewhere" {
+		shutdownCauser = "my_Self"
+	} else if evt.Reason == "" {
+		shutdownCauser = "sender_hung_up"
+	}
+	payload["Shutdown_Causer"] = shutdownCauser
+
+	var contactJID types.JID
+	if !evt.CallCreatorAlt.IsEmpty() {
+		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreatorAlt, client) // Use NormalizeJIDFromLID
+	} else {
+		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreator, client) // Use NormalizeJIDFromLID
+	}
+
+	payload["Sender_Number_Call"] = contactJID.User
+	
+	// Try to get PushName
+	contact, err := client.Store.Contacts.GetContact(ctx, contactJID)
+	if err == nil && contact.Found && contact.PushName != "" {
+		payload["Sender_Pushname_Call"] = contact.PushName
+	} else {
+		payload["Sender_Pushname_Call"] = "Unknown"
+	}
+
+	// Receiver pushname
+	if client.Store != nil && client.Store.PushName != "" {
+		payload["Receiver_Pushname_Call"] = client.Store.PushName
+	} else {
+		payload["Receiver_Pushname_Call"] = "Unknown"
+	}
+
+	payload["Type"] = "call_terminate_message" // Consistent Type field
+
+	outerBody["payload"] = payload
+
+	if len(config.WhatsappWebhook) > 0 {
+		go func(body map[string]any) {
+			webhookCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := forwardPayloadToConfiguredWebhooks(webhookCtx, body, "call terminate event"); err != nil {
+				log.Errorf("Failed to forward call terminate event to webhook: %v", err)
+			}
+		}(outerBody)
 	}
 }

@@ -20,6 +20,25 @@ export default {
     computed: {
         phone_id() {
             return this.phone + this.type;
+        },
+        isSubmitButtonDisabled() {
+            if (this.type !== window.TYPESTATUS && !this.phone.trim()) {
+                return true;
+            }
+
+            if (!this.question.trim()) {
+                return true;
+            }
+            
+            if (this.options.some(option => option.trim() === '')) {
+                return true;
+            }
+
+            if (this.max_answer < 1 || this.max_answer > this.options.length) {
+                return true;
+            }
+            
+            return false;
         }
     },
     methods: {
@@ -163,7 +182,7 @@ export default {
             </form>
         </div>
         <div class="actions">
-            <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
+            <button class="ui approve positive right labeled icon button" :class="{'loading': this.loading, 'disabled': isSubmitButtonDisabled || loading}"
                  @click.prevent="handleSubmit">
                 Enviar
                 <i class="send icon"></i>

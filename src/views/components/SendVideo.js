@@ -29,6 +29,28 @@ export default {
         phone_id() {
             return this.phone + this.type;
         },
+        isSubmitButtonDisabled() {
+            let isValid = true;
+
+            if (this.type !== window.TYPESTATUS && !this.phone.trim()) {
+                isValid = false;
+            }
+
+            const fileInput = $("#file_video")[0];
+            const hasFile = fileInput && fileInput.files && fileInput.files[0];
+
+            if (!hasFile && !this.video_url) {
+                isValid = false;
+            }
+
+            if (hasFile) {
+                const videoFile = fileInput.files[0];
+                if (!videoFile.type.startsWith('video/')) {
+                    isValid = false;
+                }
+            }
+            return !isValid;
+        }
     },
     watch: {
         view_once(newValue) {
@@ -221,7 +243,7 @@ export default {
         </div>
         <div class="actions">
             <button class="ui approve positive right labeled icon button" 
-                 :class="{'loading': loading, 'disabled': !isValidForm() || loading}"
+                 :class="{'loading': loading, 'disabled': isSubmitButtonDisabled || loading}"
                  @click.prevent="handleSubmit">
                 Enviar
                 <i class="send icon"></i>

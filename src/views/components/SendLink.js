@@ -21,6 +21,13 @@ export default {
         phone_id() {
             return this.phone + this.type;
         },
+        isSubmitButtonDisabled() {
+            const isPhoneValid = this.type === window.TYPESTATUS || this.phone.trim().length > 0;
+            const isLinkValid = this.link.trim().length > 0 && this.link.length <= 4096;
+            const isCaptionValid = this.caption.trim().length > 0 && this.caption.length <= 4096;
+            
+            return !isPhoneValid || !isLinkValid || !isCaptionValid;
+        }
     },
     methods: {
         openModal() {
@@ -150,7 +157,7 @@ export default {
         </div>
         <div class="actions">
             <button class="ui approve positive right labeled icon button" 
-                 :class="{'disabled': !isValidForm() || loading}"
+                 :class="{'disabled': isSubmitButtonDisabled || loading}"
                  @click.prevent="handleSubmit">
                 Enviar
                 <i class="send icon"></i>

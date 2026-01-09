@@ -24,6 +24,17 @@ export default {
         phone_id() {
             return this.phone + this.type;
         },
+        isSubmitButtonDisabled() {
+            if (this.type !== window.TYPESTATUS && !this.phone.trim()) {
+                return true;
+            }
+
+            if (!this.selected_file && !this.image_url) {
+                return true;
+            }
+            
+            return false;
+        }
     },
     watch: {
         view_once(newValue) {
@@ -210,7 +221,7 @@ export default {
         </div>
         <div class="actions">
             <button class="ui approve positive right labeled icon button" 
-                 :class="{'loading': this.loading, 'disabled': !isValidForm() || loading}"
+                 :class="{'loading': this.loading, 'disabled': isSubmitButtonDisabled || loading}"
                  @click.prevent="handleSubmit">
                 Enviar
                 <i class="send icon"></i>

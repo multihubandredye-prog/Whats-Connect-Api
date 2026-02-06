@@ -349,7 +349,10 @@ func buildMediaFields(ctx context.Context, client *whatsmeow.Client, evt *events
 				logrus.Errorf("Failed to download image from %s: %v", evt.Info.SourceString(), err)
 				return pkgError.WebhookError(fmt.Sprintf("Failed to download image: %v", err))
 			}
-			payload["Image"] = path.MediaPath
+			payload["Image"] = map[string]any{
+				"path":    path.MediaPath,
+				"caption": imageMedia.GetCaption(),
+			}
 			payload["Extension_arq"] = filepath.Ext(path.MediaPath)
 		} else {
 			payload["Image"] = map[string]any{
@@ -388,7 +391,10 @@ func buildMediaFields(ctx context.Context, client *whatsmeow.Client, evt *events
 				logrus.Errorf("Failed to download video from %s: %v", evt.Info.SourceString(), err)
 				return pkgError.WebhookError(fmt.Sprintf("Failed to download video: %v", err))
 			}
-			payload["Video"] = path.MediaPath
+			payload["Video"] = map[string]any{
+				"path":    path.MediaPath,
+				"caption": videoMedia.GetCaption(),
+			}
 			payload["Extension_arq"] = filepath.Ext(path.MediaPath)
 		} else {
 			payload["Video"] = map[string]any{
@@ -408,7 +414,10 @@ func buildMediaFields(ctx context.Context, client *whatsmeow.Client, evt *events
 				logrus.Errorf("Failed to download video note from %s: %v", evt.Info.SourceString(), err)
 				return pkgError.WebhookError(fmt.Sprintf("Failed to download video note: %v", err))
 			}
-			payload["Video_Note"] = path.MediaPath
+			payload["Video_Note"] = map[string]any{
+				"path":    path.MediaPath,
+				"caption": ptvMedia.GetCaption(),
+			}
 			payload["Extension_arq"] = filepath.Ext(path.MediaPath)
 		} else {
 			payload["Video_Note"] = map[string]any{

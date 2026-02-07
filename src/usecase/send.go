@@ -376,11 +376,7 @@ func (service serviceSend) SendImage(ctx context.Context, request domainSend.Ima
 		msg.ImageMessage.ContextInfo.Expiration = proto.Uint32(mappedExpiration)
 	}
 
-	caption := "🖼️ Image"
-	if request.Caption != "" {
-		caption = "🖼️ " + request.Caption
-	}
-	ts, err := service.wrapSendMessage(ctx, client, dataWaRecipient, msg, caption)
+	ts, err := service.wrapSendMessage(ctx, client, dataWaRecipient, msg, request.Caption)
 	go func() {
 		errDelete := utils.RemoveFile(0, deletedItems...)
 		if errDelete != nil {
@@ -500,11 +496,7 @@ func (service serviceSend) SendFile(ctx context.Context, request domainSend.File
 		msg.DocumentMessage.ContextInfo.Expiration = proto.Uint32(mappedExpiration)
 	}
 
-	caption := "📄 Document"
-	if request.Caption != "" {
-		caption = "📄 " + request.Caption
-	}
-	ts, err := service.wrapSendMessage(ctx, client, dataWaRecipient, msg, caption)
+	ts, err := service.wrapSendMessage(ctx, client, dataWaRecipient, msg, request.Caption)
 	if err != nil {
 		return response, err
 	}
@@ -852,11 +844,7 @@ func (service serviceSend) SendVideo(ctx context.Context, request domainSend.Vid
 		msg.VideoMessage.ContextInfo.Expiration = proto.Uint32(mappedExpiration)
 	}
 
-	caption := "🎥 Video"
-	if request.Caption != "" {
-		caption = "🎥 " + request.Caption
-	}
-	ts, err := service.wrapSendMessage(ctx, client, dataWaRecipient, msg, caption)
+	ts, err := service.wrapSendMessage(ctx, client, dataWaRecipient, msg, request.Caption)
 	if err != nil {
 		return response, err
 	}

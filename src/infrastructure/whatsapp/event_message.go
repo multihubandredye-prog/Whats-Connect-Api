@@ -327,12 +327,16 @@ func buildMediaFields(ctx context.Context, client *whatsmeow.Client, evt *events
 				logrus.Errorf("Failed to download document from %s: %v", evt.Info.SourceString(), err)
 				return pkgError.WebhookError(fmt.Sprintf("Failed to download document: %v", err))
 			}
-			payload["Document"] = path.MediaPath
+			payload["Document"] = map[string]any{
+				"Path":    path.MediaPath,
+				"Caption": documentMedia.GetCaption(),
+			}
 			payload["Extension_arq"] = filepath.Ext(path.MediaPath)
 		} else {
 			payload["Document"] = map[string]any{
 				"url":      documentMedia.GetURL(),
 				"filename": documentMedia.GetFileName(),
+				"caption":  documentMedia.GetCaption(),
 			}
 			if filename := documentMedia.GetFileName(); filename != "" {
 				payload["Extension_arq"] = filepath.Ext(filename)

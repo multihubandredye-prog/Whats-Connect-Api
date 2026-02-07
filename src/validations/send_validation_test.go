@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	pkgError "whats-connect-api2/pkg/error"
+	pkgError "github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/error"
 )
 
 func TestValidateDuration(t *testing.T) {
@@ -41,12 +41,12 @@ func TestValidateDuration(t *testing.T) {
 		{
 			name:     "should error with invalid duration",
 			duration: func() *int { d := 12345; return &d }(),
-			err:      pkgError.ValidationError("invalid duration. allowed values are 0 (disabled), 86400 (24 hours), 604800 (7 days), or 7776000 (90 days)"),
+			err:      pkgError.ValidationError("Duração inválida. Os valores permitidos são 0 (desativado), 86400 (24 horas), 604800 (7 dias), ou 7776000 (90 dias)"),
 		},
 		{
 			name:     "should error with negative duration",
 			duration: func() *int { d := -1; return &d }(),
-			err:      pkgError.ValidationError("invalid duration. allowed values are 0 (disabled), 86400 (24 hours), 604800 (7 days), or 7776000 (90 days)"),
+			err:      pkgError.ValidationError("Duração inválida. Os valores permitidos são 0 (desativado), 86400 (24 horas), 604800 (7 dias), ou 7776000 (90 dias)"),
 		},
 	}
 

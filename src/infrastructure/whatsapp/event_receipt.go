@@ -15,22 +15,19 @@ import (
 func getReceiptTypeDescription(evt types.ReceiptType) string {
 	switch evt {
 	case types.ReceiptTypeDelivered:
-		return "means the message was delivered to the device (but the user might not have noticed)."
+		return "Significa que a mensagem foi entregue ao dispositivo (mas o usuário pode não ter percebido)."
 	case types.ReceiptTypeSender:
-		return "sent by your other devices when a message you sent is delivered to them."
+		return "enviada pelos seus outros dispositivos quando uma mensagem que você enviou é entregue a eles."
 	case types.ReceiptTypeRetry:
-		return "the message was delivered to the device, but decrypting the message failed."
+		return "A mensagem foi entregue ao dispositivo, mas a descriptografia falhou."
 	case types.ReceiptTypeRead:
-		return "the user opened the chat and saw the message."
+		return "O usuário abriu o chat e viu a mensagem."
 	case types.ReceiptTypeReadSelf:
-		return "the current user read a message from a different device, and has read receipts disabled in privacy settings."
+		return "O usuário atual leu uma mensagem de um dispositivo diferente e desativou as confirmações de leitura nas configurações de privacidade."
 	case types.ReceiptTypePlayed:
-		return `This is dispatched for both incoming and outgoing messages when played. If the current user opened the media,
-	it means the media should be removed from all devices. If a recipient opened the media, it's just a notification
-	for the sender that the media was viewed.`
+		return `Esta mensagem é enviada tanto para mensagens recebidas quanto para mensagens enviadas quando reproduzidas. Se o usuário atual abriu a mídia, significa que a mídia deve ser removida de todos os dispositivos. Se um destinatário abriu a mídia, é apenas uma notificação para o remetente de que a mídia foi visualizada.`
 	case types.ReceiptTypePlayedSelf:
-		return `probably means the current user opened a view-once media message from a different device,
-	and has read receipts disabled in privacy settings.`
+		return `Provavelmente significa que o usuário atual abriu uma mensagem de mídia visualizável apenas uma vez em um dispositivo diferente, e tem as confirmações de leitura desativadas nas configurações de privacidade.`
 	default:
 		return "unknown receipt type"
 	}

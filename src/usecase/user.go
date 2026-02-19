@@ -8,23 +8,27 @@ import (
 	"image"
 	"time"
 
+	domainChat "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/chat"
 	domainUser "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/user"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
 	pkgError "github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/error"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/validations"
 	"github.com/disintegration/imaging"
+	"github.com/sirupsen/logrus"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/appstate"
 	"go.mau.fi/whatsmeow/types"
 )
 
 type serviceUser struct {
-	// Remove the WaCli field - we'll use the global client instead
+	chatService domainChat.IChatUsecase
 }
 
-func NewUserService() domainUser.IUserUsecase {
-	return &serviceUser{}
+func NewUserService(chatService domainChat.IChatUsecase) domainUser.IUserUsecase {
+	return &serviceUser{
+		chatService: chatService,
+	}
 }
 
 func (service serviceUser) Info(ctx context.Context, request domainUser.InfoRequest) (response domainUser.InfoResponse, err error) {
@@ -195,23 +199,84 @@ func (service serviceUser) MyPrivacySetting(ctx context.Context) (response domai
 	return response, nil
 }
 
-func (service serviceUser) MyListContacts(ctx context.Context) (response domainUser.MyListContactsResponse, err error) {
+func (service serviceUser) MyListContacts(ctx context.Context, request domainUser.MyListContactsRequest) (response domainUser.MyListContactsResponse, err error) {
 	client := whatsapp.ClientFromContext(ctx)
 	if client == nil {
 		return response, pkgError.ErrWaCLI
 	}
 	utils.MustLogin(client)
 
-	contacts, err := client.Store.Contacts.GetAllContacts(ctx)
-	if err != nil {
-		return
-	}
+	if request.Filter == "chatted" {
+		const pageSize = 100 // Max limit for ListChats
+		offset := 0
+		contactMap := make(map[types.JID]domainUser.MyListContactsResponseData)
 
-	for jid, contact := range contacts {
-		response.Data = append(response.Data, domainUser.MyListContactsResponseData{
-			JID:  jid,
-			Name: contact.FullName,
-		})
+		for {
+			chatListRequest := domainChat.ListChatsRequest{
+				Limit:  pageSize,
+				Offset: offset,
+			}
+			chatResponse, err := service.chatService.ListChats(ctx, chatListRequest)
+			if err != nil {
+				logrus.WithError(err).Error("Failed to list chats for chatted filter")
+				return response, err
+			}
+
+			for _, chat := range chatResponse.Data {
+				jid, err := types.ParseJID(chat.JID)
+				if err != nil {
+					logrus.WithError(err).WithField("chat_jid_str", chat.JID).Warn("Failed to parse chat JID string")
+					continue
+				}
+
+				if jid.Server == types.GroupServer {
+					continue
+				}
+
+				contact, err := client.Store.Contacts.GetContact(ctx, jid)
+				if err != nil {
+					logrus.WithError(err).WithField("contact_jid", jid).Warn("Failed to get contact info for chat JID")
+					continue
+				}
+
+				contactName := contact.PushName
+				if contactName == "" {
+					contactName = jid.User
+				}
+				contactMap[jid] = domainUser.MyListContactsResponseData{
+					JID:  jid,
+					Name: contactName,
+				}
+			}
+
+			if len(chatResponse.Data) < pageSize {
+				// No more chats to fetch
+				break
+			}
+			offset += pageSize
+		}
+
+		// Convert map to slice
+		for _, contactData := range contactMap {
+			response.Data = append(response.Data, contactData)
+		}
+	} else {
+		// Default to "all" contacts, with name fallback
+		contacts, err := client.Store.Contacts.GetAllContacts(ctx)
+		if err != nil {
+			return response, err
+		}
+
+		for jid, contact := range contacts {
+			contactName := contact.PushName
+			if contactName == "" {
+				contactName = jid.User
+			}
+			response.Data = append(response.Data, domainUser.MyListContactsResponseData{
+				JID:  jid,
+				Name: contactName,
+			})
+		}
 	}
 
 	return response, nil

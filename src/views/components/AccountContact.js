@@ -2,34 +2,58 @@ export default {
     name: 'AccountContact',
     data() {
         return {
-            contacts: []
+            contacts: [],
+            contactFilter: 'all', // 'all' or 'chatted'
+            loading: false,
         }
     },
     methods: {
         async openModal() {
+            this.contactFilter = 'all'; // Reset filter to default when opening
+            $('#modalContactList').modal('show');
+            await this.refreshContacts();
+        },
+        async refreshContacts() {
+            this.loading = true;
             try {
-                this.dtClear()
+                this.dtClear();
                 await this.submitApi();
-                $('#modalContactList').modal('show');
-                this.dtRebuild()
-                showSuccessInfo("Contatos obtidos")
+                this.dtRebuild();
             } catch (err) {
-                showErrorInfo(err)
+                showErrorInfo(err);
+            } finally {
+                this.loading = false;
             }
         },
+        async changeFilter(filter) {
+            if (this.contactFilter === filter) return;
+            this.contactFilter = filter;
+            await this.refreshContacts();
+        },
         dtClear() {
-            $('#account_contacts_table').DataTable().destroy();
+            const table = $('#account_contacts_table');
+            if ($.fn.DataTable.isDataTable(table)) {
+                table.DataTable().destroy();
+            }
         },
         dtRebuild() {
-            $('#account_contacts_table').DataTable({
-                "pageLength": 10,
-                "reloadData": true,
-            }).draw();
+            // Use a timeout to ensure Vue has rendered the table before DataTables initializes
+            setTimeout(() => {
+                $('#account_contacts_table').DataTable({
+                    "pageLength": 10,
+                    "destroy": true,
+                }).draw();
+            }, 0);
         },
         async submitApi() {
             try {
-                let response = await window.http.get(`/user/my/contacts`)
+                const response = await window.http.get(`/user/my/contacts?filter=${this.contactFilter}`);
                 this.contacts = response.data.results.data;
+                 if (this.contacts.length > 0) {
+                    showSuccessInfo("Contatos obtidos");
+                } else {
+                    showWarningInfo("Nenhum contato encontrado para este filtro.");
+                }
             } catch (error) {
                 if (error.response) {
                     throw new Error(error.response.data.message);
@@ -46,21 +70,14 @@ export default {
                 return;
             }
             
-            // Create CSV content with headers
             let csvContent = "Número de Telefone,Nome\n";
-            
-            // Add each contact as a row
             this.contacts.forEach(contact => {
                 const phoneNumber = this.getPhoneNumber(contact.jid);
-                // Escape commas and quotes in the name field
                 const escapedName = contact.name ? contact.name.replace(/"/g, '""') : "";
                 csvContent += `${phoneNumber},"${escapedName}"\n`;
             });
             
-            // Create a Blob with the CSV data
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            
-            // Create a download link and trigger download
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.setAttribute('href', url);
@@ -89,12 +106,17 @@ export default {
         <i class="close icon"></i>
         <div class="header">
             Meus Contatos
-            <button class="ui green right floated button" @click="exportToCSV">
-                <i class="download icon"></i> Exportar para CSV
-            </button>
         </div>
         <div class="content">
-            <table class="ui celled table" id="account_contacts_table">
+            <div class="ui buttons" style="margin-bottom: 1em;">
+                <button class="ui button" :class="{ 'active positive': contactFilter === 'all' }" @click="changeFilter('all')">Todos</button>
+                <div class="or" data-text="ou"></div>
+                <button class="ui button" :class="{ 'active positive': contactFilter === 'chatted' }" @click="changeFilter('chatted')">Apenas com Conversa</button>
+            </div>
+            
+            <div v-if="loading" class="ui active centered inline loader" style="margin-top: 2em; margin-bottom: 2em;"></div>
+
+            <table v-show="!loading" class="ui celled table" id="account_contacts_table">
                 <thead>
                 <tr>
                     <th>Número de Telefone</th>
@@ -108,6 +130,14 @@ export default {
                 </tr>
                 </tbody>
             </table>
+        </div>
+        <div class="actions">
+            <button class="ui green button" @click="exportToCSV">
+                <i class="download icon"></i> Exportar para CSV
+            </button>
+            <div class="ui black deny button">
+                Fechar
+            </div>
         </div>
     </div>
     `

@@ -132,8 +132,12 @@ func (controller *User) UserMyListNewsletter(c *fiber.Ctx) error {
 }
 
 func (controller *User) UserMyListContacts(c *fiber.Ctx) error {
+	var request domainUser.MyListContactsRequest
+	err := c.QueryParser(&request)
+	utils.PanicIfNeeded(err)
+
 	ctx := whatsapp.ContextWithDevice(c.UserContext(), getDeviceFromCtx(c))
-	response, err := controller.Service.MyListContacts(ctx)
+	response, err := controller.Service.MyListContacts(ctx, request)
 	utils.PanicIfNeeded(err)
 
 	return c.JSON(utils.ResponseData{

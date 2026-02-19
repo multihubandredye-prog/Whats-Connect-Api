@@ -48,7 +48,10 @@ func (h *QueryHandler) toolListContacts() mcp.Tool {
 }
 
 func (h *QueryHandler) handleListContacts(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	resp, err := h.userService.MyListContacts(ctx)
+	contactListRequest := domainUser.MyListContactsRequest{
+		Filter: "all", // Or can be left empty, as "all" is the default behavior in usecase
+	}
+	resp, err := h.userService.MyListContacts(ctx, contactListRequest)
 	if err != nil {
 		return nil, err
 	}

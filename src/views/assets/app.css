@@ -631,6 +631,22 @@ body::after {
     overflow: hidden;
 }
 
+/* Fix for modals on mobile and viewport issues */
+.ui.dimmer.modals.page {
+    overflow-y: auto !important;
+    padding: 1.5rem 1rem !important;
+}
+
+@media (max-width: 768px) {
+    .ui.modal {
+        margin-top: 40px !important; /* Ensure it starts below the browser chrome */
+        margin-bottom: 40px !important;
+        position: relative !important;
+        top: 0 !important;
+        width: 95% !important; /* Slightly wider on mobile for better fit */
+    }
+}
+
 .ui.modal > .header {
     background: linear-gradient(135deg, var(--bg-card2), rgba(0,212,255,0.08)) !important;
     color: var(--text-bright) !important;
@@ -669,6 +685,41 @@ body::after {
         0 0 20px rgba(0,212,255,0.1),
         0 8px 24px rgba(0,0,0,0.4) !important;
 }
+
+/* ============================================================
+   TABELAS (Geral em Modais)
+   ============================================================ */
+.ui.modal table.ui.table {
+    background: var(--bg-card);
+    border: none;
+}
+
+.ui.modal table.ui.table thead th {
+    background: var(--bg-card2) !important;
+    color: var(--cyan) !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 0.75em !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    border-bottom: 1px solid var(--border-hot) !important;
+}
+
+.ui.modal table.ui.table tbody tr {
+    background: var(--bg-card) !important;
+    color: var(--text) !important;
+    border-bottom: 1px solid var(--border) !important;
+    transition: background 0.2s ease;
+}
+
+.ui.modal table.ui.table tbody tr:hover {
+    background: rgba(0,212,255,0.05) !important;
+}
+
+.ui.modal table.ui.table td {
+    color: var(--text);
+    border-top: 1px solid var(--border);
+}
+
 
 /* ============================================================
    TABELAS (DataTables)
@@ -890,4 +941,66 @@ code {
         font-size: 1.6em;
         letter-spacing: 2px;
     }
+}
+
+/* ============================================================
+   FORMULÁRIOS (Correções em Modais)
+   ============================================================ */
+/* Estilo para labels de formulário em modais */
+.ui.modal .ui.form .field > label {
+    color: var(--text-muted) !important;
+}
+
+/* Estilo para labels de checkbox em modais */
+.ui.modal .ui.form .ui.checkbox label {
+    color: var(--text) !important;
+}
+
+.ui.modal .ui.form .ui.checkbox input:checked ~ label {
+    color: var(--cyan) !important;
+}
+
+/* Estilo para accordion (Filtros Avançados) em modais */
+.ui.modal .ui.accordion .title {
+    color: var(--text-bright) !important;
+}
+.ui.modal .ui.accordion .title:hover {
+    color: var(--cyan) !important;
+}
+.ui.modal .ui.accordion .content {
+    background: rgba(0,212,255,0.02);
+    padding: 1em !important;
+}
+
+/* ============================================================
+   MENSAGENS DE CHAT (ChatMessages.js)
+   ============================================================ */
+/* Container da lista de mensagens */
+.messages-container-custom {
+    max-height: 55vh !important; /* Altura responsiva */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 1em;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+}
+
+/* Estilo para cada item de mensagem */
+.messages-container-custom .item .description p {
+    color: var(--text) !important; /* Garante que o texto da mensagem seja legível */
+    margin: 0;
+}
+
+/* Container de mídia dentro da mensagem */
+.messages-container-custom .item .media-container {
+    margin-top: 1em;
+    padding: 0.5em;
+    background: rgba(0,212,255,0.04);
+    border-radius: 4px;
+}
+
+/* Garante que o texto meta nas mensagens do chat seja visível */
+.messages-container-custom .item .meta span {
+    color: var(--text-muted) !important;
 }

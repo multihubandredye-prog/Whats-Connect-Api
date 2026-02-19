@@ -24,20 +24,21 @@ export default {
         }
     },
     methods: {
-        async openModal() {
+        async loadAndShowModal() {
             try {
                 this.dtClear();
-                // Reset groups before fetching new data
                 this.groups = [];
                 await this.submitApi();
                 $('#modalGroupList').modal('show');
-                // Wait a bit for modal animation to complete before initializing DataTable
                 await new Promise(resolve => setTimeout(resolve, 100));
                 await this.dtRebuild();
-                showSuccessInfo("Grupos carregados")
+                showSuccessInfo("Grupos carregados");
             } catch (err) {
-                showErrorInfo(err)
+                showErrorInfo(err);
             }
+        },
+        async openModal() {
+            await this.loadAndShowModal();
         },
         dtClear() {
             const table = $('#account_groups_table');
@@ -162,7 +163,10 @@ export default {
             this.openModal();
         },
         handleParticipantsClosed() {
-            $('#modalGroupList').modal('show');
+            // Recalculate modal dimensions before showing it again
+            $('#modalGroupList').modal('refresh');
+            // Re-fetch and re-render data
+            this.loadAndShowModal();
         },
         async handleProcessRequest(member, action) {
             if (!this.selectedGroupId || !member) return;

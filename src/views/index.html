@@ -203,6 +203,12 @@
     {{ if isEnableBasicAuth .BasicAuthToken }}
     window.http.defaults.headers.common['Authorization'] = "{{ .BasicAuthToken }}";
     {{ end }}
+
+    // Global Modal Settings to fix mobile viewport bugs
+    $.fn.modal.settings.centered = false;
+    $.fn.modal.settings.observeChanges = true;
+    $.fn.modal.settings.autofocus = false;
+    $.fn.modal.settings.allowMultiple = true;
 </script>
 <script type="module">
     import AppLogin from "{{ .AppBasePath }}/components/AppLogin.js";
@@ -400,7 +406,11 @@
         mounted() {
             setTimeout(() => {
                 document.getElementById('app').style.display = 'block';
-                document.getElementById('splash-screen').classList.add('fade-out');
+                const splash = document.getElementById('splash-screen');
+                splash.classList.add('fade-out');
+                setTimeout(() => {
+                    splash.style.display = 'none';
+                }, 600);
             }, 800);
         },
     }).mount('#app')

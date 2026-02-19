@@ -298,18 +298,21 @@ export default {
       const baseStyle = {
         padding: "1em",
         margin: "0.5em 0",
+        background: 'transparent', // Base background for all messages
+        borderLeft: "4px solid var(--border)",
+        transition: "background 0.3s ease",
       };
 
       if (message.is_from_me) {
         return {
           ...baseStyle,
-          borderLeft: "4px solid #2185d0",
-          backgroundColor: "#f8f9fa",
+          borderLeftColor: "var(--cyan)", // Use theme color for 'my' messages
+          backgroundColor: "var(--cyan-faint)", // Use a faint theme background
         };
       } else {
         return {
           ...baseStyle,
-          borderLeft: "4px solid #767676",
+          borderLeftColor: "var(--text-muted)", // Use a muted color for 'their' messages
         };
       }
     },
@@ -561,7 +564,7 @@ export default {
                     </div>
                 </div>
                 
-                <div class="ui divided items" style="max-height: 400px; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: thin;">
+                <div class="ui divided items messages-container-custom">
                     <div v-for="message in messages" :key="message.id" 
                          class="item" 
                          :style="getMessageStyle(message)">

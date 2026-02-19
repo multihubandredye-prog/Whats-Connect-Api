@@ -65,6 +65,10 @@ type MyListContactsResponse struct {
 	Data []MyListContactsResponseData `json:"data"`
 }
 
+type MyListContactsRequest struct {
+	Filter string `json:"filter" query:"filter"`
+}
+
 type MyListContactsResponseData struct {
 	JID  types.JID `json:"jid"`
 	Name string    `json:"name"`

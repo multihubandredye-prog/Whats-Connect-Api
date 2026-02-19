@@ -897,6 +897,64 @@ code {
 }
 
 /* ============================================================
+   DATATABLES ADJUSTMENTS
+   ============================================================ */
+.dataTables_wrapper .dataTables_paginate {
+    margin-top: 1em !important;
+    display: flex !important;
+    justify-content: center !important;
+    gap: 5px !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    background: var(--bg-card2) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 4px !important;
+    padding: 5px 12px !important;
+    cursor: pointer !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: var(--cyan-dim) !important;
+    color: white !important;
+    border-color: var(--cyan) !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.current) {
+    background: var(--cyan-glow) !important;
+}
+
+.dataTables_wrapper .dataTables_info {
+    color: var(--text-muted) !important;
+    font-size: 0.85em !important;
+    text-align: center !important;
+    margin-bottom: 0.5em !important;
+}
+
+.dataTables_filter input {
+    margin-left: 0.5em !important;
+    background: rgba(0,212,255,0.03) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-bright) !important;
+    padding: 6px !important;
+    border-radius: 6px !important;
+}
+
+@media (max-width: 480px) {
+    .dataTables_wrapper .dataTables_filter {
+        text-align: center !important;
+        float: none !important;
+        margin-bottom: 1em !important;
+    }
+    
+    .ui.stackable.buttons .button, 
+    .ui.stackable.buttons .or {
+        margin-bottom: 5px !important;
+    }
+}
+
+/* ============================================================
    ANIMAÇÕES DE ENTRADA
    ============================================================ */
 @keyframes fadeUp {

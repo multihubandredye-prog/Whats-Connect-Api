@@ -42,6 +42,19 @@ export default {
                 $('#account_contacts_table').DataTable({
                     "pageLength": 10,
                     "destroy": true,
+                    "pagingType": "simple_numbers",
+                    "language": {
+                        "url": "//cdn.datatables.net/plug-ins/1.11.4/i18n/pt-BR.json",
+                        "paginate": {
+                            "previous": "Anterior",
+                            "next": "Próximo"
+                        }
+                    },
+                    "columnDefs": [
+                        { "width": "40%", "targets": 0 }
+                    ],
+                    "responsive": true,
+                    "autoWidth": false
                 }).draw();
             }, 0);
         },
@@ -52,7 +65,7 @@ export default {
                  if (this.contacts.length > 0) {
                     showSuccessInfo("Contatos obtidos");
                 } else {
-                    showWarningInfo("Nenhum contato encontrado para este filtro.");
+                    showSuccessInfo("Nenhum contato encontrado para este filtro.");
                 }
             } catch (error) {
                 if (error.response) {
@@ -105,10 +118,11 @@ export default {
     <div class="ui large modal" id="modalContactList">
         <i class="close icon"></i>
         <div class="header">
+            <i class="address book icon"></i>
             Meus Contatos
         </div>
         <div class="content">
-            <div class="ui buttons" style="margin-bottom: 1em;">
+            <div class="ui fluid stackable buttons" style="margin-bottom: 1.5em;">
                 <button class="ui button" :class="{ 'active positive': contactFilter === 'all' }" @click="changeFilter('all')">Todos</button>
                 <div class="or" data-text="ou"></div>
                 <button class="ui button" :class="{ 'active positive': contactFilter === 'chatted' }" @click="changeFilter('chatted')">Apenas com Conversa</button>
@@ -116,28 +130,30 @@ export default {
             
             <div v-if="loading" class="ui active centered inline loader" style="margin-top: 2em; margin-bottom: 2em;"></div>
 
-            <table v-show="!loading" class="ui celled table" id="account_contacts_table">
-                <thead>
-                <tr>
-                    <th>Número de Telefone</th>
-                    <th>Nome</th>
-                </tr>
-                </thead>
-                <tbody v-if="contacts != null">
-                <tr v-for="contact in contacts">
-                    <td>{{ getPhoneNumber(contact.jid) }}</td>
-                    <td>{{ contact.name }}</td>
-                </tr>
-                </tbody>
-            </table>
+            <div class="ui segment" v-show="!loading" style="padding: 0; border: none; background: transparent;">
+                <table class="ui celled striped table" id="account_contacts_table" style="width:100%">
+                    <thead>
+                    <tr>
+                        <th>Telefone</th>
+                        <th>Nome</th>
+                    </tr>
+                    </thead>
+                    <tbody v-if="contacts != null">
+                    <tr v-for="contact in contacts">
+                        <td class="collapsing">
+                            <i class="whatsapp icon" style="color: #25D366"></i>
+                            <strong>{{ getPhoneNumber(contact.jid) }}</strong>
+                        </td>
+                        <td>{{ contact.name || '---' }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
         <div class="actions">
-            <button class="ui green button" @click="exportToCSV">
+            <button class="ui green fluid button" @click="exportToCSV">
                 <i class="download icon"></i> Exportar para CSV
             </button>
-            <div class="ui black deny button">
-                Fechar
-            </div>
         </div>
     </div>
     `

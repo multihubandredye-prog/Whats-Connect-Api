@@ -159,7 +159,7 @@ export default {
                 <div class="field" style="padding-bottom: 30px">
                     <label>Arquivo</label>
                     <input type="file" style="display: none" id="file_file" @change="handleFileChange">
-                    <label for="file_file" class="ui positive medium green left floated button" style="color: white">
+                    <label for="file_file" class="ui positive medium green left floated button" style="color: var(--text-bright) !important;">
                         <i class="ui upload icon"></i>
                         Carregar arquivo
                     </label>

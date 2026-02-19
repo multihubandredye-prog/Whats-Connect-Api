@@ -34,7 +34,7 @@ export default {
                 // Wait a bit for modal animation to complete before initializing DataTable
                 await new Promise(resolve => setTimeout(resolve, 100));
                 await this.dtRebuild();
-                showSuccessInfo("Groups fetched")
+                showSuccessInfo("Grupos carregados")
             } catch (err) {
                 showErrorInfo(err)
             }
@@ -60,14 +60,14 @@ export default {
         },
         async handleLeaveGroup(group_id) {
             try {
-                const ok = confirm("Are you sure to leave this group?");
+                const ok = confirm("Tem certeza que deseja sair deste grupo?");
                 if (!ok) return;
 
                 await this.leaveGroupApi(group_id);
                 this.dtClear()
                 await this.submitApi();
                 this.dtRebuild()
-                showSuccessInfo("Group left")
+                showSuccessInfo("Grupo saiu")
             } catch (err) {
                 showErrorInfo(err)
             }
@@ -125,7 +125,7 @@ export default {
                 $('#modalRequestedMembers').modal('show');
             } catch (error) {
                 this.loadingRequestedMembers = false;
-                let errorMessage = "Failed to fetch requested members";
+                let errorMessage = "Falha ao buscar membros solicitados";
                 if (error.response) {
                     errorMessage = error.response.data.message || errorMessage;
                 }
@@ -141,7 +141,7 @@ export default {
             try {
                 await this.$refs.participantsModal.open(group);
             } catch (error) {
-                const errorMessage = error?.message || 'Failed to fetch participants';
+                const errorMessage = error?.message || 'Falha ao buscar participantes';
                 showErrorInfo(errorMessage);
                 $('#modalGroupList').modal('show');
             }
@@ -167,8 +167,8 @@ export default {
         async handleProcessRequest(member, action) {
             if (!this.selectedGroupId || !member) return;
 
-            const actionText = action === 'approve' ? 'approve' : 'reject';
-            const confirmMsg = `Are you sure you want to ${actionText} this member request?`;
+            const actionText = action === 'approve' ? 'aprovar' : 'rejeitar';
+            const confirmMsg = `Tem certeza que deseja ${actionText} esta solicitação de membro?`;
             const ok = confirm(confirmMsg);
             if (!ok) return;
 
@@ -185,11 +185,11 @@ export default {
                 // Remove the processed member from the list
                 this.requestedMembers = this.requestedMembers.filter(m => m.jid !== member.jid);
 
-                showSuccessInfo(`Member request ${actionText}d`);
+                showSuccessInfo(`Solicitação de membro ${actionText}da`);
                 this.processingMember = null;
             } catch (error) {
                 this.processingMember = null;
-                let errorMessage = `Failed to ${actionText} member request`;
+                let errorMessage = `Falha ao ${actionText} solicitação de membro`;
                 if (error.response) {
                     errorMessage = error.response.data.message || errorMessage;
                 }
@@ -200,10 +200,10 @@ export default {
     template: `
     <div class="green card" @click="openModal" style="cursor: pointer">
         <div class="content">
-            <a class="ui green right ribbon label">Group</a>
-            <div class="header">List Groups</div>
+            <a class="ui green right ribbon label">Grupo</a>
+            <div class="header">Listar Grupos</div>
             <div class="description">
-                Display all your groups
+                Exibir todos os seus grupos
             </div>
         </div>
     </div>
@@ -212,17 +212,17 @@ export default {
     <div class="ui large modal" id="modalGroupList">
         <i class="close icon"></i>
         <div class="header">
-            My Group List
+            Minha Lista de Grupos
         </div>
         <div class="content">
             <table class="ui celled table" id="account_groups_table">
                 <thead>
                 <tr>
-                    <th>Group ID</th>
-                    <th>Name</th>
-                    <th>Participants</th>
-                    <th>Created At</th>
-                    <th>Action</th>
+                    <th>ID do Grupo</th>
+                    <th>Nome</th>
+                    <th>Participantes</th>
+                    <th>Criado Em</th>
+                    <th>Ação</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -233,10 +233,10 @@ export default {
                     <td>{{ formatDate(g.GroupCreated) }}</td>
                     <td>
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            <button class="ui blue tiny button" @click="handleSeeParticipants(g)">Participants</button>
-                            <button class="ui grey tiny button" @click="handleExportParticipants(g)">Export CSV</button>
-                            <button v-if="isAdmin(g)" class="ui green tiny button" @click="handleSeeRequestedMember(g.JID)">Requested Members</button>
-                            <button class="ui red tiny button" @click="handleLeaveGroup(g.JID)">Leave</button>
+                            <button class="ui blue tiny button" @click="handleSeeParticipants(g)">Participantes</button>
+                            <button class="ui grey tiny button" @click="handleExportParticipants(g)">Exportar CSV</button>
+                            <button v-if="isAdmin(g)" class="ui green tiny button" @click="handleSeeRequestedMember(g.JID)">Membros Solicitados</button>
+                            <button class="ui red tiny button" @click="handleLeaveGroup(g.JID)">Sair</button>
                         </div>
                     </td>
                 </tr>
@@ -251,23 +251,23 @@ export default {
     <div class="ui modal" id="modalRequestedMembers">
         <i class="close icon"></i>
         <div class="header">
-            Requested Group Members
+            Membros Solicitados do Grupo
         </div>
         <div class="content">
             <div v-if="loadingRequestedMembers" class="ui active centered inline loader"></div>
             
             <div v-else-if="requestedMembers.length === 0" class="ui info message">
-                <div class="header">No Requested Members</div>
-                <p>There are no pending member requests for this group.</p>
+                <div class="header">Nenhum Membro Solicitado</div>
+                <p>Não há solicitações de membros pendentes para este grupo.</p>
             </div>
             
             <table v-else class="ui celled table">
                 <thead>
                     <tr>
-                        <th>User</th>
-                        <th>Phone Number</th>
-                        <th>Request Time</th>
-                        <th>Action</th>
+                        <th>Usuário</th>
+                        <th>Número de Telefone</th>
+                        <th>Hora da Solicitação</th>
+                        <th>Ação</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -284,14 +284,14 @@ export default {
                                         @click="handleProcessRequest(member, 'approve')"
                                         :disabled="processingMember === member.jid">
                                     <i v-if="processingMember === member.jid" class="spinner loading icon"></i>
-                                    Approve
+                                    Aprovar
                                 </button>
                                 <div class="or"></div>
                                 <button class="ui red button" 
                                         @click="handleProcessRequest(member, 'reject')"
                                         :disabled="processingMember === member.jid">
                                     <i v-if="processingMember === member.jid" class="spinner loading icon"></i>
-                                    Reject
+                                    Rejeitar
                                 </button>
                             </div>
                         </td>
@@ -300,7 +300,7 @@ export default {
             </table>
         </div>
         <div class="actions">
-            <div class="ui button" @click="closeRequestedMembersModal">Close</div>
+            <div class="ui button" @click="closeRequestedMembersModal">Fechar</div>
         </div>
     </div>
     `

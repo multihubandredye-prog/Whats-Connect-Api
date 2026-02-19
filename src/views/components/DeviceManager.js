@@ -136,62 +136,59 @@ export default {
         this.fetchDevices();
     },
     template: `
-    <div class="ui stackable grid">
-        <div class="ten wide column">
-            <div class="ui segment">
-                <h3 class="ui header">
-                    <i class="play icon"></i>
-                    <div class="content">
-                        Configuração do Dispositivo
-                        <div class="sub header">Crie ou selecione um device_id e, em seguida, abra o login.</div>
-                    </div>
-                </h3>
-                <div class="ui form">
-                    <div class="two fields">
-                        <div class="field">
-                            <label>ID do Dispositivo (opcional)</label>
-                            <input type="text" v-model="deviceIdInput" placeholder="Deixe vazio para gerar automaticamente">
+        <div class="ui stackable grid">
+            <div class="ten wide column">
+                <div class="ui segment">
+                    <h3 class="ui header">
+                        <i class="play icon"></i>
+                                            <div class="content">
+                                                Configuração do Dispositivo
+                                                <div class="sub header" style="color: var(--text-bright) !important;">Crie ou selecione um device_id e, em seguida, abra o login.</div>
+                                            </div>                    </h3>
+                    <div class="ui form">
+                        <div class="two fields">
+                            <div class="field">
+                                <label>ID do Dispositivo (opcional)</label>
+                                <input type="text" v-model="deviceIdInput" placeholder="Deixe vazio para gerar automaticamente">
+                            </div>
+                            <div class="field">
+                                <label>Ações</label>
+                                <div class="ui buttons">
+                                    <button class="ui primary button" :class="{loading: isCreatingDevice}" @click="createDevice">
+                                        Criar dispositivo
+                                    </button>
+                                    <div class="or"></div>
+                                    <button class="ui blue button" @click="useDeviceFromInput">Usar este dispositivo</button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="field">
-                            <label>Ações</label>
-                            <div class="ui buttons">
-                                <button class="ui primary button" :class="{loading: isCreatingDevice}" @click="createDevice">
-                                    Criar dispositivo
+                    </div>
+                    <div class="ui divider"></div>
+                    
+                    <!-- Device List -->
+                    <div class="ui relaxed list" v-if="deviceList.length">
+                        <div class="item" v-for="dev in deviceList" :key="dev.id || dev.device" style="display: flex; align-items: center;">
+                            <i class="large mobile alternate icon" style="margin-right: 0.5em;"></i>
+                            <div class="content" style="flex-grow: 1;">
+                                <div class="header" style="color: var(--text-bright) !important;">{{ dev.id || dev.device }}</div>
+                                                                                                                    <div class="description">
+                                                                                                                        <span style="color: var(--text-bright) !important;">Estado: {{ dev.state || 'desconhecido' }}</span>
+                                                                                                                        <span v-if="dev.jid" style="margin-left: 0.5em; color: var(--text-bright) !important;"> · JID: {{ dev.jid }}</span>
+                                                                                                                    </div>                                                                                    </div>
+                                                                                    <div class="right floated content" style="display: flex; align-items: center; gap: 0.5em;">
+                                <button class="ui mini button" 
+                                        :class="{green: selectedDeviceId === (dev.id || dev.device)}"
+                                        @click="setDeviceContext(dev.id || dev.device)">
+                                    {{ selectedDeviceId === (dev.id || dev.device) ? 'Selecionado' : 'Usar' }}
                                 </button>
-                                <div class="or"></div>
-                                <button class="ui button" @click="useDeviceFromInput">Usar este dispositivo</button>
+                                <button class="ui mini red icon button" 
+                                        @click="openDeleteModal(dev.id || dev.device, dev.jid)" 
+                                        :class="{loading: isDeleting && deviceToDelete.id === (dev.id || dev.device)}">
+                                    <i class="trash icon" style="margin: 0;"></i>
+                                </button>
                             </div>
                         </div>
-                    </div>
-                </div>
-                <div class="ui divider"></div>
-                
-                <!-- Device List -->
-                <div class="ui relaxed list" v-if="deviceList.length">
-                    <div class="item" v-for="dev in deviceList" :key="dev.id || dev.device">
-                        <i class="mobile alternate icon"></i>
-                        <div class="content">
-                            <div class="header">{{ dev.id || dev.device }}</div>
-                            <div class="description">
-                                <span>Estado: {{ dev.state || 'desconhecido' }}</span>
-                                <span v-if="dev.jid"> · JID: {{ dev.jid }}</span>
-                            </div>
-                        </div>
-                        <div class="right floated content">
-                            <button class="ui mini button" 
-                                    :class="{active: selectedDeviceId === (dev.id || dev.device)}"
-                                    @click="setDeviceContext(dev.id || dev.device)">
-                                {{ selectedDeviceId === (dev.id || dev.device) ? 'Selecionado' : 'Usar' }}
-                            </button>
-                            <button class="ui mini red icon button" 
-                                    @click="openDeleteModal(dev.id || dev.device, dev.jid)" 
-                                    :class="{loading: isDeleting && deviceToDelete.id === (dev.id || dev.device)}">
-                                <i class="trash icon" style="margin: 0;"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="ui message" v-else>
+                    </div>                <div class="ui message" v-else>
                     Nenhum dispositivo ainda. Crie um para começar.
                 </div>
             </div>

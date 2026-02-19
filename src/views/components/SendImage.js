@@ -209,7 +209,7 @@ export default {
                 <div class="field" style="padding-bottom: 30px">
                     <label>Imagem</label>
                     <input type="file" style="display: none" id="file_image" accept="image/png,image/jpg,image/jpeg" @change="handleImageChange"/>
-                    <label for="file_image" class="ui positive medium green left floated button" style="color: white">
+                    <label for="file_image" class="ui positive medium green left floated button" style="color: var(--text-bright) !important;">
                         <i class="ui upload icon"></i>
                         Carregar imagem
                     </label>

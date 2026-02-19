@@ -36,16 +36,16 @@ export default {
                 isValid = false;
             }
 
-            const fileInput = $("#file_video")[0];
-            const hasFile = fileInput && fileInput.files && fileInput.files[0];
+            const hasFile = this.selectedFileName || this.video_url;
 
-            if (!hasFile && !this.video_url) {
+            if (!hasFile) {
                 isValid = false;
             }
 
-            if (hasFile) {
-                const videoFile = fileInput.files[0];
-                if (!videoFile.type.startsWith('video/')) {
+            if (this.selectedFileName) {
+                const fileInput = $("#file_video")[0];
+                const videoFile = fileInput && fileInput.files && fileInput.files[0];
+                if (!videoFile || !videoFile.type.startsWith('video/')) {
                     isValid = false;
                 }
             }
@@ -228,7 +228,7 @@ export default {
                 <div class="field" style="padding-bottom: 30px" v-if="!video_url">
                     <label>Vídeo</label>
                     <input type="file" style="display: none" accept="video/*" id="file_video" @change="handleFileChange">
-                    <label for="file_video" class="ui positive medium green left floated button" style="color: white">
+                    <label for="file_video" class="ui positive medium green left floated button" style="color: var(--text-bright) !important;">
                         <i class="ui upload icon"></i>
                         Carregar vídeo
                     </label>

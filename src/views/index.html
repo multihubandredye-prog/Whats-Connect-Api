@@ -1,13 +1,14 @@
 <!doctype html>
 <html lang="pt-br">
 <head>
-    <!-- Meta tags obrigatórias -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Bootstrap CSS -->
     <link rel="stylesheet" type="text/css"
           href="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.8.8/semantic.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.4/css/dataTables.semanticui.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ .AppBasePath }}/assets/app.css">
     <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.4/js/jquery.dataTables.min.js"></script>
@@ -16,32 +17,41 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/axios@1.1.2/dist/axios.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-    <title>API WhatsApp {{ .AppVersion }}</title>
+    <title>Whats Connect Api {{ .AppVersion }}</title>
 </head>
 <body>
+
+<!-- ===================== SPLASH ===================== -->
 <div id="splash-screen">
-    <!-- Logotipo limpo sem wrapper de fundo -->
-    <img src="{{ .AppBasePath }}/assets/gowa.svg" alt="Logotipo GoWA" class="splash-icon" id="main-logo">
-    
-    <h2 class="splash-title">API WhatsApp</h2>
+    <img src="{{ .AppBasePath }}/assets/gowca.svg" alt="Logo" class="splash-icon" id="main-logo">
+    <h2 class="splash-title">Whats Connect Api</h2>
+    <p class="splash-subtitle">// INICIALIZANDO SISTEMA</p>
     <div class="ui active large inline loader splash-spinner"></div>
 </div>
 
-<div class="ui container" id="app" style="display: none;">
+<!-- ===================== APP ===================== -->
+<div class="ui container main-content-wrap" id="app" style="display: none;">
+
+    <!-- HEADER -->
     <div class="main-header">
-        <h1 class="ui header center aligned">
-            <div class="title-container">
-                <img src="{{ .AppBasePath }}/assets/gowa.svg" alt="Logotipo GoWA">
-                
-                <span>API WhatsApp</span>
-                
-                <div class="version-label">
-                    Versão {{ .AppVersion }}
+        <div class="header-top-bar"></div>
+        <div class="header-scanline"></div>
+        <div class="header-inner">
+            <h1 class="ui header center aligned">
+                <div class="title-container">
+                    <div class="title-logo-wrap">
+                        <img src="{{ .AppBasePath }}/assets/gowca.svg" alt="Logo">
+                    </div>
+                    <div class="title-text-group">
+                        <span class="title-main">Whats Connect Api</span>
+                    </div>
+                    <div class="version-label">{{ .AppVersion }}</div>
                 </div>
-            </div>
-        </h1>
+            </h1>
+        </div>
     </div>
 
+    <!-- DEVICE CONTEXT ALERT -->
     <div class="ui info message" v-if="selectedDeviceId">
         <div class="header">
             <i class="linkify icon"></i>
@@ -53,57 +63,48 @@
         </p>
     </div>
 
-    <device-manager 
+    <!-- DEVICE MANAGER -->
+    <device-manager
         ref="deviceManager"
         ws-base-path="{{ .AppBasePath }}"
         @device-selected="handleDeviceSelected"
         @devices-updated="handleDevicesUpdated">
     </device-manager>
 
-    <div class="ui horizontal divider">
-        Aplicativo
-    </div>
+    <div class="ui horizontal divider section-divider">▸ Aplicativo</div>
 
     <div class="ui warning message" v-if="!selectedDeviceId">
         <div class="header">Dispositivo necessário</div>
         <p>Selecione ou crie um dispositivo acima. Forneça <code>X-Device-Id</code> nas chamadas REST.</p>
     </div>
 
-    <div class="ui three column stackable grid cards" :class="{disabled: !selectedDeviceId}">
+    <div class="ui three column stackable centered grid cards" :class="{disabled: !selectedDeviceId}">
         <app-login :logged-in="isSelectedDeviceLoggedIn"></app-login>
         <app-logout @reload-devices="handleReloadDevice"></app-logout>
         <app-reconnect @reload-devices="handleReloadDevice"></app-reconnect>
         <app-login-with-code :logged-in="isSelectedDeviceLoggedIn"></app-login-with-code>
     </div>
 
-    <div class="ui horizontal divider">
-        Enviar
-    </div>
+    <div class="ui horizontal divider">▸ Enviar</div>
 
-    <div class="ui three column doubling grid cards">
+    <div class="ui three column doubling centered grid cards">
         <send-message></send-message>
         <send-image></send-image>
         <send-file max-file-size="{{ .MaxFileSize }}"></send-file>
-
         <send-video max-video-size="{{ .MaxVideoSize }}"></send-video>
         <send-sticker></send-sticker>
         <send-contact></send-contact>
-
         <send-location></send-location>
         <send-audio></send-audio>
         <send-poll></send-poll>
-        
         <send-presence></send-presence>
-        
         <send-chat-presence></send-chat-presence>
         <send-link></send-link>
     </div>
 
-    <div class="ui horizontal divider">
-        Mensagem
-    </div>
+    <div class="ui horizontal divider">▸ Mensagem</div>
 
-    <div class="ui three column doubling grid cards">
+    <div class="ui three column doubling centered grid cards">
         <message-delete></message-delete>
         <message-revoke></message-revoke>
         <message-react></message-react>
@@ -111,11 +112,9 @@
         <message-read></message-read>
     </div>
 
-    <div class="ui horizontal divider">
-        Grupo
-    </div>
+    <div class="ui horizontal divider">▸ Grupo</div>
 
-    <div class="ui three column doubling grid cards">
+    <div class="ui three column doubling centered grid cards">
         <group-list :connected="connected_devices"></group-list>
         <group-create></group-create>
         <group-join-with-link></group-join-with-link>
@@ -130,19 +129,15 @@
         <group-info></group-info>
     </div>
 
-    <div class="ui horizontal divider">
-        Boletim informativo
-    </div>
+    <div class="ui horizontal divider">▸ Boletim informativo</div>
 
-    <div class="ui three column doubling grid cards">
+    <div class="ui three column doubling centered grid cards">
         <newsletter-list></newsletter-list>
     </div>
 
-    <div class="ui horizontal divider">
-        Conta
-    </div>
+    <div class="ui horizontal divider">▸ Conta</div>
 
-    <div class="ui three column doubling grid cards">
+    <div class="ui three column doubling centered grid cards">
         <account-avatar></account-avatar>
         <account-change-avatar></account-change-avatar>
         <account-change-push-name></account-change-push-name>
@@ -153,11 +148,9 @@
         <account-user-check></account-user-check>
     </div>
 
-    <div class="ui horizontal divider">
-        Gerenciamento de Conversa
-    </div>
+    <div class="ui horizontal divider">▸ Gerenciamento de Conversa</div>
 
-    <div class="ui three column doubling grid cards">
+    <div class="ui three column doubling centered grid cards">
         <chat-pin-manager></chat-pin-manager>
         <chat-disappearing-manager></chat-disappearing-manager>
         <chat-list></chat-list>
@@ -165,6 +158,19 @@
     </div>
 
 </div>
+
+<!-- ===================== FOOTER FIXO ===================== -->
+<footer class="app-footer">
+    <div class="footer-inner">
+        <span class="footer-dot"></span>
+        <span class="footer-text">
+            Desenvolvido por <strong class="footer-dev">Andredye Oliveira Melo</strong>
+        </span>
+        <span class="footer-dot"></span>
+    </div>
+</footer>
+
+<!-- ===================== JS (inalterado) ===================== -->
 <script>
     window.TYPEGROUP = "@g.us";
     window.TYPEUSER = "@s.whatsapp.net";
@@ -188,7 +194,6 @@
             classProgress: 'green'
         });
     }
-
 
     const baseHost = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
     const DEVICE_ID_HEADER = 'X-Device-Id';
@@ -336,68 +341,47 @@
                 this.connected_devices = devices;
             },
             connectWebSocket() {
-                if (!this.selectedDeviceId) {
-                    return;
-                }
-
+                if (!this.selectedDeviceId) return;
                 if (this.app_ws) {
                     this.app_ws.close();
                     this.app_ws = null;
                 }
-
                 const wsURL = this.constructWebSocketURL();
-                if (!wsURL) {
-                    return;
-                }
-
+                if (!wsURL) return;
                 this.app_ws = new WebSocket(wsURL);
-
-                this.app_ws.onopen = (evt) => {
-                    this.handleReloadDevice();
-                };
-
+                this.app_ws.onopen = (evt) => { this.handleReloadDevice(); };
                 this.app_ws.onerror = (error) => {
                     console.error('Erro no WebSocket:', error);
-                    // Only show error notification if the device is logged in
                     if (this.isSelectedDeviceLoggedIn) {
                         showErrorInfo('Ocorreu um erro de conexão. Atualize ou selecione novamente o dispositivo.');
                     }
                 };
-
                 this.app_ws.onmessage = (evt) => {
                     const message = JSON.parse(evt.data)
                     switch (message.code) {
                         case 'LOGIN_SUCCESS':
                             showSuccessInfo('Sucesso no Login: ' + message.message)
                             $('#modalLogin').modal('hide');
-
-                            // fetch devices
                             this.handleReloadDevice()
                             break;
                         case 'LIST_DEVICES':
                             this.connected_devices = message.result
                             break;
                         case 'LOGOUT_COMPLETE':
-                            // Tratar limpeza bem-sucedida após logout remoto
                             showSuccessInfo('✅ Logout completo: ' + message.message)
-                            console.log('[LOGOUT_COMPLETE] Limpeza de logout remoto concluída:', message)
-                            // Opcionalmente, atualize a lista de dispositivos
                             this.handleReloadDevice()
                             break;
                         case 'DEVICE_REMOVED': {
                             const removedId = message.result?.device_id;
                             const devices = message.result?.devices;
                             showSuccessInfo('✅ ' + (message.message || 'Dispositivo removido'));
-
                             if (Array.isArray(devices)) {
                                 this.deviceList = devices;
                                 this.connected_devices = devices;
-
                                 if (removedId && this.selectedDeviceId === removedId) {
                                     this.selectedDeviceId = '';
                                     this.applyDeviceHeader('');
                                 }
-
                                 if (!this.selectedDeviceId && this.deviceList.length > 0) {
                                     const first = this.deviceList[0].id || this.deviceList[0].device;
                                     this.setDeviceContext(first);
@@ -414,7 +398,6 @@
             },
         },
         mounted() {
-            // Exibir o contêiner do aplicativo e ocultar a tela de splash após os dados iniciais serem buscados
             setTimeout(() => {
                 document.getElementById('app').style.display = 'block';
                 document.getElementById('splash-screen').classList.add('fade-out');

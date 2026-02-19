@@ -46,7 +46,9 @@ export default {
                 return false;
             }
 
-            if (!this.selectedFileName && !this.audio_url) {
+            const hasContent = this.selectedFileName || this.audio_url;
+
+            if (!hasContent) {
                 return false;
             }
 
@@ -168,7 +170,7 @@ export default {
                     <label>Áudio</label>
                     <input type="file" style="display: none" accept="audio/*" id="file_audio"
                            @change="handleFileChange"/>
-                    <label for="file_audio" class="ui positive medium green left floated button" style="color: white">
+                    <label for="file_audio" class="ui positive medium green left floated button" style="color: var(--text-bright) !important;">
                         <i class="ui upload icon"></i>
                         Carregar
                     </label>

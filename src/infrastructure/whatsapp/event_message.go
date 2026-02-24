@@ -14,7 +14,8 @@ import (
 	"golang.org/x/net/html"
 
 	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/types"
+	wtypes "go.mau.fi/whatsmeow/types"
+	waE2E "go.mau.fi/whatsmeow/proto/waE2E"
 
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/pollstore"
@@ -233,7 +234,7 @@ func buildMessageBody(ctx context.Context, client *whatsmeow.Client, evt *events
 			tagsMap[tag] = true
 		}
 		for tag := range tagsMap {
-			lid, err := types.ParseJID(tag[1:] + "@lid")
+			lid, err := wtypes.ParseJID(tag[1:] + "@lid")
 			if err != nil {
 				logrus.Errorf("Error when parse jid: %v", err)
 			} else {
@@ -463,9 +464,20 @@ func buildOtherMessageTypes(evt *events.Message, payload map[string]any) {
 func getMessageType(evt *events.Message) string {
 	if evt.Message.GetConversation() != "" || evt.Message.GetExtendedTextMessage() != nil {
 		text := evt.Message.GetConversation()
+		var contextInfo *waE2E.ContextInfo
+
 		if extText := evt.Message.GetExtendedTextMessage(); extText != nil {
 			text = extText.GetText()
+			contextInfo = extText.GetContextInfo()
 		}
+
+		// Check if it's a reply to a status message
+		if contextInfo != nil {
+			if contextInfo.GetRemoteJID() == "status@broadcast" {
+				return "status_response_message"
+			}
+		}
+
 		if containsURL(text) {
 			return "link_message"
 		}

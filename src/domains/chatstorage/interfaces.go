@@ -12,6 +12,7 @@ type IChatStorageRepository interface {
 	// Chat operations
 	CreateMessage(ctx context.Context, evt *events.Message) error
 	StoreChat(chat *Chat) error
+	StoreChatsBatch(chats []*Chat) error
 	GetChat(jid string) (*Chat, error)
 	GetChatByDevice(deviceID, jid string) (*Chat, error)
 	GetChats(filter *ChatFilter) ([]*Chat, error)

@@ -117,12 +117,17 @@ func handlePairSuccess(ctx context.Context, evt *events.PairSuccess) {
 		Message: fmt.Sprintf("Successfully pair with %s", evt.ID.String()),
 	}
 	primaryDB, secondaryDB := getStoreContainers()
-	syncKeysDevice(ctx, primaryDB, secondaryDB)
+	if primaryDB != nil && secondaryDB != nil {
+		if dev, err := primaryDB.GetDevice(ctx, evt.ID); err == nil && dev != nil {
+			syncKeysDevice(ctx, secondaryDB, dev)
+		}
+	}
 }
 
 func handleLoggedOut(ctx context.Context, instance *DeviceInstance, chatStorageRepo domainChatStorage.IChatStorageRepository) {
 	logrus.Warnf("[REMOTE_LOGOUT] Received LoggedOut event for device %s - user logged out from phone", instance.ID())
 
+	instance.StopPeriodicSync()
 	if client := instance.GetClient(); client != nil {
 		client.Disconnect()
 	}
@@ -145,12 +150,13 @@ func handleLoggedOut(ctx context.Context, instance *DeviceInstance, chatStorageR
 	}
 }
 
-func handleConnectionEvents(_ context.Context, client *whatsmeow.Client, instance *DeviceInstance) {
+func handleConnectionEvents(ctx context.Context, client *whatsmeow.Client, instance *DeviceInstance) {
 	if client == nil {
 		return
 	}
 	if instance != nil {
 		instance.UpdateStateFromClient()
+		instance.StartPeriodicSync()
 
 		// Persist updated JID/DisplayName to database after successful connection
 		// Skip if instance.ID looks like a JID (auto-created device) to avoid recreating deleted duplicates

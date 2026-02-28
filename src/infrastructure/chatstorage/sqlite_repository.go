@@ -49,6 +49,67 @@ func (r *SQLiteRepository) StoreChat(chat *domainChatStorage.Chat) error {
 	return err
 }
 
+// StoreChatsBatch creates or updates multiple chats in a single transaction
+func (r *SQLiteRepository) StoreChatsBatch(chats []*domainChatStorage.Chat) error {
+	if len(chats) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Prepare statements for update and insert
+	updateStmt, err := tx.Prepare(`
+		UPDATE chats SET name = ?, last_message_time = ?, ephemeral_expiration = ?, updated_at = ?
+		WHERE jid = ? AND device_id = ?
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare chat update statement: %w", err)
+	}
+	defer updateStmt.Close()
+
+	insertStmt, err := tx.Prepare(`
+		INSERT INTO chats (jid, device_id, name, last_message_time, ephemeral_expiration, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare chat insert statement: %w", err)
+	}
+	defer insertStmt.Close()
+
+	now := time.Now()
+	for _, chat := range chats {
+		chat.UpdatedAt = now
+		if chat.CreatedAt.IsZero() {
+			chat.CreatedAt = now
+		}
+
+		result, err := updateStmt.Exec(
+			chat.Name, chat.LastMessageTime, chat.EphemeralExpiration, chat.UpdatedAt,
+			chat.JID, chat.DeviceID,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to update chat %s: %w", chat.JID, err)
+		}
+
+		rowsAffected, _ := result.RowsAffected()
+		if rowsAffected == 0 {
+			_, err = insertStmt.Exec(
+				chat.JID, chat.DeviceID, chat.Name, chat.LastMessageTime, chat.EphemeralExpiration,
+				chat.CreatedAt, chat.UpdatedAt,
+			)
+			if err != nil {
+				return fmt.Errorf("failed to insert chat %s: %w", chat.JID, err)
+			}
+		}
+	}
+
+	return tx.Commit()
+}
+
 // GetChat retrieves a chat by JID
 func (r *SQLiteRepository) GetChat(jid string) (*domainChatStorage.Chat, error) {
 	query := `

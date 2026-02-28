@@ -60,6 +60,13 @@ func (r *deviceChatStorage) StoreChat(chat *domainChatStorage.Chat) error {
 	return r.base.StoreChat(r.withDeviceChat(chat))
 }
 
+func (r *deviceChatStorage) StoreChatsBatch(chats []*domainChatStorage.Chat) error {
+	for i := range chats {
+		chats[i] = r.withDeviceChat(chats[i])
+	}
+	return r.base.StoreChatsBatch(chats)
+}
+
 func (r *deviceChatStorage) GetChat(jid string) (*domainChatStorage.Chat, error) {
 	return r.base.GetChatByDevice(r.deviceID, jid)
 }

@@ -17,6 +17,22 @@ import (
 )
 
 func handleMessage(ctx context.Context, evt *events.Message, chatStorageRepo domainChatStorage.IChatStorageRepository, client *whatsmeow.Client) {
+	// Persist chat info on every incoming message to keep names updated
+	if chatStorageRepo != nil && !evt.Info.IsFromMe {
+		// Normalize JID, especially for LID addresses
+		normalizedChatJID := NormalizeJIDFromLID(ctx, evt.Info.Chat, client)
+		if normalizedChatJID.Server != types.GroupServer { // Only upsert for individual chats here
+			chat := &domainChatStorage.Chat{
+				DeviceID: DeviceIDFromContext(ctx),
+				JID:      normalizedChatJID.String(),
+				Name:     evt.Info.PushName,
+			}
+			if err := chatStorageRepo.UpsertChat(chat); err != nil {
+				logrus.WithError(err).Warn("Failed to upsert chat info from incoming message")
+			}
+		}
+	}
+
 	// Log message metadata
 	metaParts := buildMessageMetaParts(evt)
 	log.Infof("Received message %s from %s (%s): %+v",
@@ -34,8 +50,12 @@ func handleMessage(ctx context.Context, evt *events.Message, chatStorageRepo dom
 	// Handle poll creation message
 	handlePollCreationMessage(evt)
 
-	// Handle image message if present
+	// Handle media messages and set up auto-deletion
 	handleImageMessage(ctx, evt, client)
+	handleVideoMessage(ctx, evt, client)
+	handleAudioMessage(ctx, evt, client)
+	handleDocumentMessage(ctx, evt, client)
+	handleStickerMessage(ctx, evt, client)
 
 	// Auto-mark message as read if configured
 	handleAutoMarkRead(ctx, evt, client)
@@ -44,6 +64,102 @@ func handleMessage(ctx context.Context, evt *events.Message, chatStorageRepo dom
 
 	// Forward to webhook if configured
 	handleWebhookForward(ctx, evt, client)
+}
+
+func handleVideoMessage(ctx context.Context, evt *events.Message, client *whatsmeow.Client) {
+	if !config.WhatsappAutoDownloadMedia {
+		return
+	}
+	if client == nil {
+		return
+	}
+	if vid := evt.Message.GetVideoMessage(); vid != nil {
+		extractedMedia, err := utils.ExtractMedia(ctx, client, config.PathStorages, vid)
+		if err != nil {
+			log.Errorf("Failed to download video: %v", err)
+		} else {
+			log.Infof("Video downloaded to %s", extractedMedia.MediaPath)
+			go func(mediaPath string) {
+				if err := utils.RemoveFile(30, mediaPath); err != nil {
+					log.Errorf("Failed to delete media file %s: %v", mediaPath, err)
+				} else {
+					log.Infof("Media file %s deleted after 30 seconds", mediaPath)
+				}
+			}(extractedMedia.MediaPath)
+		}
+	}
+}
+
+func handleAudioMessage(ctx context.Context, evt *events.Message, client *whatsmeow.Client) {
+	if !config.WhatsappAutoDownloadMedia {
+		return
+	}
+	if client == nil {
+		return
+	}
+	if aud := evt.Message.GetAudioMessage(); aud != nil {
+		extractedMedia, err := utils.ExtractMedia(ctx, client, config.PathStorages, aud)
+		if err != nil {
+			log.Errorf("Failed to download audio: %v", err)
+		} else {
+			log.Infof("Audio downloaded to %s", extractedMedia.MediaPath)
+			go func(mediaPath string) {
+				if err := utils.RemoveFile(30, mediaPath); err != nil {
+					log.Errorf("Failed to delete media file %s: %v", mediaPath, err)
+				} else {
+					log.Infof("Media file %s deleted after 30 seconds", mediaPath)
+				}
+			}(extractedMedia.MediaPath)
+		}
+	}
+}
+
+func handleDocumentMessage(ctx context.Context, evt *events.Message, client *whatsmeow.Client) {
+	if !config.WhatsappAutoDownloadMedia {
+		return
+	}
+	if client == nil {
+		return
+	}
+	if doc := evt.Message.GetDocumentMessage(); doc != nil {
+		extractedMedia, err := utils.ExtractMedia(ctx, client, config.PathStorages, doc)
+		if err != nil {
+			log.Errorf("Failed to download document: %v", err)
+		} else {
+			log.Infof("Document downloaded to %s", extractedMedia.MediaPath)
+			go func(mediaPath string) {
+				if err := utils.RemoveFile(30, mediaPath); err != nil {
+					log.Errorf("Failed to delete media file %s: %v", mediaPath, err)
+				} else {
+					log.Infof("Media file %s deleted after 30 seconds", mediaPath)
+				}
+			}(extractedMedia.MediaPath)
+		}
+	}
+}
+
+func handleStickerMessage(ctx context.Context, evt *events.Message, client *whatsmeow.Client) {
+	if !config.WhatsappAutoDownloadMedia {
+		return
+	}
+	if client == nil {
+		return
+	}
+	if sticker := evt.Message.GetStickerMessage(); sticker != nil {
+		extractedMedia, err := utils.ExtractMedia(ctx, client, config.PathStorages, sticker)
+		if err != nil {
+			log.Errorf("Failed to download sticker: %v", err)
+		} else {
+			log.Infof("Sticker downloaded to %s", extractedMedia.MediaPath)
+			go func(mediaPath string) {
+				if err := utils.RemoveFile(30, mediaPath); err != nil {
+					log.Errorf("Failed to delete media file %s: %v", mediaPath, err)
+				} else {
+					log.Infof("Media file %s deleted after 30 seconds", mediaPath)
+				}
+			}(extractedMedia.MediaPath)
+		}
+	}
 }
 
 func handlePollCreationMessage(evt *events.Message) {
@@ -88,10 +204,20 @@ func handleImageMessage(ctx context.Context, evt *events.Message, client *whatsm
 		return
 	}
 	if img := evt.Message.GetImageMessage(); img != nil {
-		if path, err := utils.ExtractMedia(ctx, client, config.PathStorages, img); err != nil {
+		// Call ExtractMedia and get the returned path
+		extractedMedia, err := utils.ExtractMedia(ctx, client, config.PathStorages, img)
+		if err != nil {
 			log.Errorf("Failed to download image: %v", err)
 		} else {
-			log.Infof("Image downloaded to %s", path)
+			log.Infof("Image downloaded to %s", extractedMedia.MediaPath)
+			// Start a goroutine to delete the file after 30 seconds
+			go func(mediaPath string) {
+				if err := utils.RemoveFile(30, mediaPath); err != nil {
+					log.Errorf("Failed to delete media file %s: %v", mediaPath, err)
+				} else {
+					log.Infof("Media file %s deleted after 30 seconds", mediaPath)
+				}
+			}(extractedMedia.MediaPath)
 		}
 	}
 }

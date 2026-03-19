@@ -70,6 +70,10 @@ func KnownDocumentExtensionByMIME(mimeType string) (string, bool) {
 func determineMediaExtension(originalFilename, mimeType string) string {
 	if originalFilename != "" {
 		if ext := filepath.Ext(originalFilename); ext != "" {
+			// Specific handling for common JPEG extensions
+			if strings.EqualFold(ext, ".jfif") {
+				return ".jpeg" // Prefer .jpeg over .jfif
+			}
 			return ext
 		}
 	}
@@ -79,10 +83,18 @@ func determineMediaExtension(originalFilename, mimeType string) string {
 	}
 
 	if ext, err := mime.ExtensionsByType(mimeType); err == nil && len(ext) > 0 {
+		// Prefer .jpeg over .jfif for image/jpeg MIME type
+		if mimeType == "image/jpeg" && (strings.EqualFold(ext[0], ".jfif") || strings.EqualFold(ext[0], ".jpe")) {
+			return ".jpeg"
+		}
 		return ext[0]
 	}
 
 	if parts := strings.Split(mimeType, "/"); len(parts) > 1 {
+		// Specific handling for common JPEG MIME types
+		if strings.EqualFold(parts[0], "image") && (strings.EqualFold(parts[1], "jpeg") || strings.EqualFold(parts[1], "jfif") || strings.EqualFold(parts[1], "jpe")) {
+			return ".jpeg"
+		}
 		return "." + parts[len(parts)-1]
 	}
 

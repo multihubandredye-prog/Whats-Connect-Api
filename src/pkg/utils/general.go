@@ -100,7 +100,16 @@ func GetMetaDataFromURL(urlStr string) (meta Metadata, err error) {
 	}
 
 	// Send an HTTP GET request to the website
-	response, err := client.Get(urlStr)
+	req, err := http.NewRequest(http.MethodGet, urlStr, nil)
+	if err != nil {
+		return meta, err
+	}
+
+	// Add browser-like headers to avoid anti-bot measures
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+
+	response, err := client.Do(req)
 	if err != nil {
 		return meta, err
 	}
@@ -484,4 +493,9 @@ func UniqueStrings(input []string) []string {
 		}
 	}
 	return result
+}
+
+// BoolPointer returns a pointer to a bool value.
+func BoolPointer(b bool) *bool {
+	return &b
 }

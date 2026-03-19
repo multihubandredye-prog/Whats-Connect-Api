@@ -9,6 +9,7 @@ type Chat struct {
 	Name                string    `db:"name"`
 	LastMessageTime     time.Time `db:"last_message_time"`
 	EphemeralExpiration uint32    `db:"ephemeral_expiration"`
+	Archived            bool      `db:"archived"`
 	CreatedAt           time.Time `db:"created_at"`
 	UpdatedAt           time.Time `db:"updated_at"`
 }
@@ -73,4 +74,6 @@ type ChatFilter struct {
 	Offset     int
 	SearchName string
 	HasMedia   bool
+	Archived   *bool
+	HasMessages *bool
 }

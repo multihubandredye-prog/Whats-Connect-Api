@@ -3,10 +3,12 @@ package chat
 // Request and Response structures for chat operations
 
 type ListChatsRequest struct {
-	Limit    int    `json:"limit" query:"limit"`
-	Offset   int    `json:"offset" query:"offset"`
-	Search   string `json:"search" query:"search"`
-	HasMedia bool   `json:"has_media" query:"has_media"`
+	Limit      int    `json:"limit" query:"limit"`
+	Offset     int    `json:"offset" query:"offset"`
+	Search     string `json:"search" query:"search"`
+	HasMedia   bool   `json:"has_media" query:"has_media"`
+	Archived   *bool  `json:"archived" query:"archived"`
+	HasMessages *bool `json:"has_messages" query:"has_messages"`
 }
 
 type ListChatsResponse struct {
@@ -49,6 +51,7 @@ type ChatInfo struct {
 	Name                string `json:"name"`
 	LastMessageTime     string `json:"last_message_time"`
 	EphemeralExpiration uint32 `json:"ephemeral_expiration"`
+	Archived            bool   `json:"archived"`
 	CreatedAt           string `json:"created_at"`
 	UpdatedAt           string `json:"updated_at"`
 }

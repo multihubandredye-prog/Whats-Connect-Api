@@ -64,6 +64,10 @@ func (r *DeviceRepository) StoreChatsBatch(chats []*domainChatStorage.Chat) erro
 	return r.base.StoreChatsBatch(chats)
 }
 
+func (r *DeviceRepository) UpsertChat(chat *domainChatStorage.Chat) error {
+	return r.base.UpsertChat(r.withDeviceChat(chat))
+}
+
 func (r *DeviceRepository) GetChat(jid string) (*domainChatStorage.Chat, error) {
 	return r.base.GetChatByDevice(r.deviceID, jid)
 }

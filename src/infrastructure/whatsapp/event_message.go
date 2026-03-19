@@ -311,6 +311,15 @@ func buildMediaFields(ctx context.Context, client *whatsmeow.Client, evt *events
 			}
 			payload["Audio"] = path.MediaPath
 			payload["Extension_arq"] = filepath.Ext(path.MediaPath)
+
+			// Start a goroutine to delete the file after 30 seconds
+			go func(mediaPath string) {
+				if err := utils.RemoveFile(30, mediaPath); err != nil {
+					logrus.Errorf("Failed to delete media file %s: %v", mediaPath, err)
+				} else {
+					logrus.Infof("Media file %s deleted from PathMedia after 30 seconds", mediaPath)
+				}
+			}(path.MediaPath)
 		} else {
 			payload["Audio"] = map[string]any{
 				"url": audioMedia.GetURL(),
@@ -333,6 +342,15 @@ func buildMediaFields(ctx context.Context, client *whatsmeow.Client, evt *events
 				"Caption": documentMedia.GetCaption(),
 			}
 			payload["Extension_arq"] = filepath.Ext(path.MediaPath)
+
+			// Start a goroutine to delete the file after 30 seconds
+			go func(mediaPath string) {
+				if err := utils.RemoveFile(30, mediaPath); err != nil {
+					logrus.Errorf("Failed to delete media file %s: %v", mediaPath, err)
+				} else {
+					logrus.Infof("Media file %s deleted from PathMedia after 30 seconds", mediaPath)
+				}
+			}(path.MediaPath)
 		} else {
 			payload["Document"] = map[string]any{
 				"url":      documentMedia.GetURL(),
@@ -359,6 +377,15 @@ func buildMediaFields(ctx context.Context, client *whatsmeow.Client, evt *events
 				"Caption": imageMedia.GetCaption(),
 			}
 			payload["Extension_arq"] = filepath.Ext(path.MediaPath)
+
+			// Start a goroutine to delete the file after 30 seconds
+			go func(mediaPath string) {
+				if err := utils.RemoveFile(30, mediaPath); err != nil {
+					logrus.Errorf("Failed to delete media file %s: %v", mediaPath, err)
+				} else {
+					logrus.Infof("Media file %s deleted from PathMedia after 30 seconds", mediaPath)
+				}
+			}(path.MediaPath)
 		} else {
 			payload["Image"] = map[string]any{
 				"url":     imageMedia.GetURL(),
@@ -379,6 +406,15 @@ func buildMediaFields(ctx context.Context, client *whatsmeow.Client, evt *events
 			}
 			payload["Sticker"] = path.MediaPath
 			payload["Extension_arq"] = filepath.Ext(path.MediaPath)
+
+			// Start a goroutine to delete the file after 30 seconds
+			go func(mediaPath string) {
+				if err := utils.RemoveFile(30, mediaPath); err != nil {
+					logrus.Errorf("Failed to delete media file %s: %v", mediaPath, err)
+				} else {
+					logrus.Infof("Media file %s deleted from PathMedia after 30 seconds", mediaPath)
+				}
+			}(path.MediaPath)
 		} else {
 			payload["Sticker"] = map[string]any{
 				"url": stickerMedia.GetURL(),
@@ -401,6 +437,15 @@ func buildMediaFields(ctx context.Context, client *whatsmeow.Client, evt *events
 				"Caption": videoMedia.GetCaption(),
 			}
 			payload["Extension_arq"] = filepath.Ext(path.MediaPath)
+
+			// Start a goroutine to delete the file after 30 seconds
+			go func(mediaPath string) {
+				if err := utils.RemoveFile(30, mediaPath); err != nil {
+					logrus.Errorf("Failed to delete media file %s: %v", mediaPath, err)
+				} else {
+					logrus.Infof("Media file %s deleted from PathMedia after 30 seconds", mediaPath)
+				}
+			}(path.MediaPath)
 		} else {
 			payload["Video"] = map[string]any{
 				"url":     videoMedia.GetURL(),
@@ -424,6 +469,15 @@ func buildMediaFields(ctx context.Context, client *whatsmeow.Client, evt *events
 				"Caption": ptvMedia.GetCaption(),
 			}
 			payload["Extension_arq"] = filepath.Ext(path.MediaPath)
+
+			// Start a goroutine to delete the file after 30 seconds
+			go func(mediaPath string) {
+				if err := utils.RemoveFile(30, mediaPath); err != nil {
+					logrus.Errorf("Failed to delete media file %s: %v", mediaPath, err)
+				} else {
+					logrus.Infof("Media file %s deleted from PathMedia after 30 seconds", mediaPath)
+				}
+			}(path.MediaPath)
 		} else {
 			payload["Video_Note"] = map[string]any{
 				"url":     ptvMedia.GetURL(),

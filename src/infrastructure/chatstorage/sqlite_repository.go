@@ -110,10 +110,44 @@ func (r *SQLiteRepository) StoreChatsBatch(chats []*domainChatStorage.Chat) erro
 	return tx.Commit()
 }
 
+// UpsertChat creates or updates a chat using an atomic ON CONFLICT query
+func (r *SQLiteRepository) UpsertChat(chat *domainChatStorage.Chat) error {
+	now := time.Now()
+	if chat.CreatedAt.IsZero() {
+		chat.CreatedAt = now
+	}
+	chat.UpdatedAt = now
+
+	query := `
+		INSERT INTO chats (jid, device_id, name, last_message_time, ephemeral_expiration, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(jid, device_id) DO UPDATE SET
+			name = CASE WHEN excluded.name != '' AND excluded.name NOT LIKE '%@%' THEN excluded.name ELSE chats.name END,
+			last_message_time = CASE 
+				WHEN excluded.last_message_time > chats.last_message_time THEN excluded.last_message_time 
+				ELSE chats.last_message_time 
+			END,
+			ephemeral_expiration = CASE WHEN excluded.ephemeral_expiration > 0 THEN excluded.ephemeral_expiration ELSE chats.ephemeral_expiration END,
+			updated_at = excluded.updated_at
+	`
+
+	_, err := r.db.Exec(query,
+		chat.JID,
+		chat.DeviceID,
+		chat.Name,
+		chat.LastMessageTime,
+		chat.EphemeralExpiration,
+		chat.CreatedAt,
+		chat.UpdatedAt,
+	)
+
+	return err
+}
+
 // GetChat retrieves a chat by JID
 func (r *SQLiteRepository) GetChat(jid string) (*domainChatStorage.Chat, error) {
 	query := `
-		SELECT device_id, jid, name, last_message_time, ephemeral_expiration, created_at, updated_at
+		SELECT device_id, jid, name, last_message_time, ephemeral_expiration, archived, created_at, updated_at
 		FROM chats
 		WHERE jid = ?
 	`
@@ -129,7 +163,7 @@ func (r *SQLiteRepository) GetChat(jid string) (*domainChatStorage.Chat, error) 
 // GetChatByDevice retrieves a chat by JID for a specific device
 func (r *SQLiteRepository) GetChatByDevice(deviceID, jid string) (*domainChatStorage.Chat, error) {
 	query := `
-		SELECT device_id, jid, name, last_message_time, ephemeral_expiration, created_at, updated_at
+		SELECT device_id, jid, name, last_message_time, ephemeral_expiration, archived, created_at, updated_at
 		FROM chats
 		WHERE jid = ? AND device_id = ?
 	`
@@ -168,7 +202,7 @@ func (r *SQLiteRepository) GetChats(filter *domainChatStorage.ChatFilter) ([]*do
 	var args []any
 
 	query := `
-		SELECT c.device_id, c.jid, c.name, c.last_message_time, c.ephemeral_expiration, c.created_at, c.updated_at
+		SELECT c.device_id, c.jid, c.name, c.last_message_time, c.ephemeral_expiration, c.archived, c.created_at, c.updated_at
 		FROM chats c
 	`
 
@@ -185,6 +219,15 @@ func (r *SQLiteRepository) GetChats(filter *domainChatStorage.ChatFilter) ([]*do
 	if filter.DeviceID != "" {
 		conditions = append(conditions, "c.device_id = ?")
 		args = append(args, filter.DeviceID)
+	}
+
+	if filter.Archived != nil {
+		conditions = append(conditions, "c.archived = ?")
+		args = append(args, *filter.Archived)
+	}
+
+	if filter.HasMessages != nil && *filter.HasMessages {
+		conditions = append(conditions, "c.last_message_time > '0001-01-01 00:00:00'") // Filtering out zero/default timestamps
 	}
 
 	if len(conditions) > 0 {
@@ -549,7 +592,7 @@ func (r *SQLiteRepository) scanChat(scanner interface{ Scan(...any) error }) (*d
 	chat := &domainChatStorage.Chat{}
 	err := scanner.Scan(
 		&chat.DeviceID, &chat.JID, &chat.Name, &chat.LastMessageTime, &chat.EphemeralExpiration,
-		&chat.CreatedAt, &chat.UpdatedAt,
+		&chat.Archived, &chat.CreatedAt, &chat.UpdatedAt,
 	)
 	return chat, err
 }
@@ -1152,5 +1195,8 @@ func (r *SQLiteRepository) getMigrations() []string {
 
 		// Migration 12: Create index for devices
 		`CREATE INDEX IF NOT EXISTS idx_devices_created_at ON devices(created_at)`,
+
+		// Migration 13: Add 'archived' column to chats table
+		`ALTER TABLE chats ADD COLUMN archived BOOLEAN DEFAULT FALSE`,
 	}
 }

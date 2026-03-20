@@ -4,7 +4,9 @@ import "mime/multipart"
 
 type FileRequest struct {
 	BaseRequest
-	File    *multipart.FileHeader `json:"file" form:"file"`
-	FileURL *string               `json:"file_url" form:"file_url"`
-	Caption string                `json:"caption" form:"caption"`
+	File      *multipart.FileHeader `json:"-" form:"file"`
+	Caption   string                `json:"caption" form:"caption"`
+	FileName  *string               `json:"file_name" form:"file_name"`
+	FileURL   *string               `json:"file_url" form:"file_url"`
+	FilePath  *string               `json:"file_path"`
 }

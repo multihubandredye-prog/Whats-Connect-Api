@@ -2,10 +2,10 @@ package chatstorage
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	domainChatStorage "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/chatstorage"
-	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 )
@@ -28,6 +28,20 @@ func (r *DeviceRepository) withDeviceChat(chat *domainChatStorage.Chat) *domainC
 	if chat == nil {
 		return nil
 	}
+
+	// Prefer a JID already set on the chat.
+	if chat.DeviceID != "" && strings.Contains(chat.DeviceID, "@") {
+		r.deviceID = chat.DeviceID
+		return chat
+	}
+
+	// Apply wrapper JID if already known.
+	if strings.Contains(r.deviceID, "@") {
+		chat.DeviceID = r.deviceID
+		return chat
+	}
+
+	// Fallback to wrapper device ID when chat is empty.
 	if chat.DeviceID == "" {
 		chat.DeviceID = r.deviceID
 	}
@@ -43,6 +57,17 @@ func (r *DeviceRepository) StoreChat(chat *domainChatStorage.Chat) error {
 	return r.base.StoreChat(r.withDeviceChat(chat))
 }
 
+func (r *DeviceRepository) StoreChatsBatch(chats []*domainChatStorage.Chat) error {
+	for i := range chats {
+		chats[i] = r.withDeviceChat(chats[i])
+	}
+	return r.base.StoreChatsBatch(chats)
+}
+
+func (r *DeviceRepository) UpsertChat(chat *domainChatStorage.Chat) error {
+	return r.base.UpsertChat(r.withDeviceChat(chat))
+}
+
 func (r *DeviceRepository) GetChat(jid string) (*domainChatStorage.Chat, error) {
 	return r.base.GetChatByDevice(r.deviceID, jid)
 }
@@ -52,8 +77,15 @@ func (r *DeviceRepository) GetChatByDevice(deviceID, jid string) (*domainChatSto
 }
 
 func (r *DeviceRepository) GetChats(filter *domainChatStorage.ChatFilter) ([]*domainChatStorage.Chat, error) {
-	if filter != nil && filter.DeviceID == "" {
-		filter.DeviceID = r.deviceID
+	if filter != nil {
+		switch {
+		case filter.DeviceID != "" && strings.Contains(filter.DeviceID, "@"):
+			r.deviceID = filter.DeviceID
+		case strings.Contains(r.deviceID, "@"):
+			filter.DeviceID = r.deviceID
+		case filter.DeviceID == "":
+			filter.DeviceID = r.deviceID
+		}
 	}
 	return r.base.GetChats(filter)
 }
@@ -79,18 +111,11 @@ func (r *DeviceRepository) GetMessageByID(id string) (*domainChatStorage.Message
 }
 
 func (r *DeviceRepository) GetMessages(filter *domainChatStorage.MessageFilter) ([]*domainChatStorage.Message, error) {
-	if filter != nil && filter.DeviceID == "" {
-		filter.DeviceID = r.deviceID
-	}
 	return r.base.GetMessages(filter)
 }
 
-func (r *DeviceRepository) SearchMessages(deviceID, chatJID, searchText string, limit int) ([]*domainChatStorage.Message, error) {
-	targetDeviceID := deviceID
-	if targetDeviceID == "" {
-		targetDeviceID = r.deviceID
-	}
-	return r.base.SearchMessages(targetDeviceID, chatJID, searchText, limit)
+func (r *DeviceRepository) SearchMessages(chatJID, searchText string, limit int) ([]*domainChatStorage.Message, error) {
+	return r.base.SearchMessages(chatJID, searchText, limit)
 }
 
 func (r *DeviceRepository) DeleteMessage(id, chatJID string) error {
@@ -101,8 +126,8 @@ func (r *DeviceRepository) DeleteMessageByDevice(deviceID, id, chatJID string) e
 	return r.base.DeleteMessageByDevice(deviceID, id, chatJID)
 }
 
-func (r *DeviceRepository) StoreSentMessageWithContext(ctx context.Context, messageID string, senderJID string, recipientJID string, content string, timestamp time.Time, msg *waE2E.Message) error {
-	return r.base.StoreSentMessageWithContext(ctx, messageID, senderJID, recipientJID, content, timestamp, msg)
+func (r *DeviceRepository) StoreSentMessageWithContext(ctx context.Context, messageID string, senderJID string, recipientJID string, content string, timestamp time.Time) error {
+	return r.base.StoreSentMessageWithContext(ctx, messageID, senderJID, recipientJID, content, timestamp)
 }
 
 func (r *DeviceRepository) GetChatMessageCount(chatJID string) (int64, error) {
@@ -119,13 +144,6 @@ func (r *DeviceRepository) GetTotalMessageCount() (int64, error) {
 
 func (r *DeviceRepository) GetTotalChatCount() (int64, error) {
 	return r.base.GetTotalChatCount()
-}
-
-func (r *DeviceRepository) GetFilteredChatCount(filter *domainChatStorage.ChatFilter) (int64, error) {
-	if filter != nil && filter.DeviceID == "" {
-		filter.DeviceID = r.deviceID
-	}
-	return r.base.GetFilteredChatCount(filter)
 }
 
 func (r *DeviceRepository) GetChatNameWithPushName(jid types.JID, chatJID string, senderUser string, pushName string) string {

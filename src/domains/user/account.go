@@ -27,9 +27,7 @@ type InfoResponseData struct {
 }
 
 type InfoResponse struct {
-	Data          []InfoResponseData `json:"data"`
-	ResolvedPhone string             `json:"resolved_phone,omitempty"`
-	ResolvedLID   string             `json:"resolved_lid,omitempty"`
+	Data []InfoResponseData `json:"data"`
 }
 
 type AvatarRequest struct {
@@ -66,6 +64,10 @@ type ChangeAvatarRequest struct {
 
 type MyListContactsResponse struct {
 	Data []MyListContactsResponseData `json:"data"`
+}
+
+type MyListContactsRequest struct {
+	Filter string `json:"filter" query:"filter"`
 }
 
 type MyListContactsResponseData struct {

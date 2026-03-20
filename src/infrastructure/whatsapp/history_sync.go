@@ -187,13 +187,6 @@ func processConversationMessages(ctx context.Context, data *waHistorySync.Histor
 						}
 					}
 				} else {
-					// Check if this is a group chat — group messages must have a participant
-					// to identify the actual sender. Without it, we'd incorrectly store the
-					// group JID as the sender (see GitHub issue #609).
-					if jid.Server == "g.us" {
-						log.Warnf("Skipping group message %s in chat %s: no participant info available", messageID, chatJID)
-						continue
-					}
 					// For individual chats, use the chat JID as sender with full format
 					sender = jid.String() // Use full JID format for consistency
 				}
@@ -240,7 +233,7 @@ func processConversationMessages(ctx context.Context, data *waHistorySync.Histor
 			}
 
 			// Store or update the chat
-			if err := chatStorageRepo.StoreChat(chat); err != nil {
+			if err := chatStorageRepo.UpsertChat(chat); err != nil {
 				log.Warnf("Failed to store chat %s: %v", chatJID, err)
 				continue
 			}
@@ -291,37 +284,17 @@ func processPushNames(ctx context.Context, data *waHistorySync.HistorySync, chat
 		jid = NormalizeJIDFromLID(ctx, jid, client)
 		jidStr := jid.String()
 
-		// Check if chat exists (device-scoped to avoid cross-device data leak)
-		existingChat, err := chatStorageRepo.GetChatByDevice(deviceID, jidStr)
-		if err != nil {
-			log.Warnf("Failed to check chat existence for %s: %v", jidStr, err)
-			continue
+		// Upsert the chat with the new push name. This will either create
+		// a new chat entry if it doesn't exist or update the existing one.
+		chat := &domainChatStorage.Chat{
+			DeviceID: deviceID,
+			JID:      jidStr,
+			Name:     name,
 		}
-
-		if existingChat == nil {
-			// Chat doesn't exist, create it to store the push name
-			newChat := &domainChatStorage.Chat{
-				DeviceID:        deviceID,
-				JID:             jidStr,
-				Name:            name,
-				LastMessageTime: time.Time{}, // Use zero time so it doesn't bubble up in chat list
-			}
-			if err := chatStorageRepo.StoreChat(newChat); err != nil {
-				log.Warnf("Failed to create chat for %s during pushname sync: %v", jidStr, err)
-			} else {
-				log.Debugf("Created new chat entry from history sync")
-			}
-			continue
-		}
-
-		// Update chat name if it's different
-		if existingChat.Name != name {
-			existingChat.Name = name
-			if err := chatStorageRepo.StoreChat(existingChat); err != nil {
-				log.Warnf("Failed to update chat name for %s: %v", jidStr, err)
-			} else {
-				log.Debugf("Updated chat name from history sync")
-			}
+		if err := chatStorageRepo.UpsertChat(chat); err != nil {
+			log.Warnf("Failed to upsert chat for %s with new push name: %v", jidStr, err)
+		} else {
+			log.Debugf("Upserted chat for %s with push name %s", jidStr, name)
 		}
 	}
 

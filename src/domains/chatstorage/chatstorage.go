@@ -9,9 +9,9 @@ type Chat struct {
 	Name                string    `db:"name"`
 	LastMessageTime     time.Time `db:"last_message_time"`
 	EphemeralExpiration uint32    `db:"ephemeral_expiration"`
+	Archived            bool      `db:"archived"`
 	CreatedAt           time.Time `db:"created_at"`
 	UpdatedAt           time.Time `db:"updated_at"`
-	Archived            bool      `db:"archived"`
 }
 
 // Message represents a WhatsApp message
@@ -58,7 +58,6 @@ type DeviceRecord struct {
 
 // MessageFilter represents query filters for messages
 type MessageFilter struct {
-	DeviceID  string
 	ChatJID   string
 	Limit     int
 	Offset    int
@@ -75,5 +74,6 @@ type ChatFilter struct {
 	Offset     int
 	SearchName string
 	HasMedia   bool
-	IsArchived *bool
+	Archived   *bool
+	HasMessages *bool
 }

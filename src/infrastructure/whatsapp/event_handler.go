@@ -47,8 +47,6 @@ func handler(ctx context.Context, instance *DeviceInstance, rawEvt any) {
 		handleMessage(ctx, evt, chatStorageRepo, client)
 	case *events.Receipt:
 		handleReceipt(ctx, evt, instance.JID(), client)
-	case *events.Archive:
-		handleArchive(ctx, evt, chatStorageRepo, client)
 	case *events.Presence:
 		handlePresence(ctx, evt)
 	case *events.HistorySync:
@@ -57,18 +55,10 @@ func handler(ctx context.Context, instance *DeviceInstance, rawEvt any) {
 		handleAppState(ctx, evt)
 	case *events.GroupInfo:
 		handleGroupInfo(ctx, evt, instance.JID(), client)
-	case *events.JoinedGroup:
-		handleJoinedGroup(ctx, evt, instance.JID(), client)
-	case *events.NewsletterJoin:
-		handleNewsletterJoin(ctx, evt, instance.JID(), client)
-	case *events.NewsletterLeave:
-		handleNewsletterLeave(ctx, evt, instance.JID(), client)
-	case *events.NewsletterLiveUpdate:
-		handleNewsletterLiveUpdate(ctx, evt, instance.JID(), client)
-	case *events.NewsletterMuteChange:
-		handleNewsletterMuteChange(ctx, evt, instance.JID(), client)
-	case *events.CallOffer:
-		handleCallOffer(ctx, evt, instance.JID(), client)
+	case *events.CallOffer: // Handle incoming call offers
+		handleCallOfferEvent(ctx, evt, instance.JID(), client)
+	case *events.CallTerminate: // Handle call termination
+		handleCallTerminateEvent(ctx, evt, instance.JID(), client)
 	}
 
 	instance.UpdateStateFromClient()
@@ -108,36 +98,16 @@ func handleDeleteForMe(ctx context.Context, evt *events.DeleteForMe, chatStorage
 	}
 }
 
-func resolvePresenceOnConnect() (types.Presence, bool) {
-	switch config.WhatsappPresenceOnConnect {
-	case "available":
-		return types.PresenceAvailable, false
-	case "none":
-		return "", true
-	default:
-		return types.PresenceUnavailable, false
-	}
-}
-
-func sendConfiguredPresence(ctx context.Context, client *whatsmeow.Client) {
-	presence, skip := resolvePresenceOnConnect()
-	if skip {
-		log.Infof("Skipping presence on connect (configured: none)")
-		return
-	}
-	if err := client.SendPresence(ctx, presence); err != nil {
-		log.Warnf("Failed to send %s presence: %v", presence, err)
-	} else {
-		log.Infof("Marked self as %s", presence)
-	}
-}
-
 func handleAppStateSyncComplete(_ context.Context, client *whatsmeow.Client, evt *events.AppStateSyncComplete) {
 	if client == nil {
 		return
 	}
 	if len(client.Store.PushName) > 0 && evt.Name == appstate.WAPatchCriticalBlock {
-		sendConfiguredPresence(context.Background(), client)
+		if err := client.SendPresence(context.Background(), types.PresenceAvailable); err != nil {
+			log.Warnf("Failed to send available presence: %v", err)
+		} else {
+			log.Infof("Marked self as available")
+		}
 	}
 }
 
@@ -147,12 +117,17 @@ func handlePairSuccess(ctx context.Context, evt *events.PairSuccess) {
 		Message: fmt.Sprintf("Successfully pair with %s", evt.ID.String()),
 	}
 	primaryDB, secondaryDB := getStoreContainers()
-	syncKeysDevice(ctx, primaryDB, secondaryDB)
+	if primaryDB != nil && secondaryDB != nil {
+		if dev, err := primaryDB.GetDevice(ctx, evt.ID); err == nil && dev != nil {
+			syncKeysDevice(ctx, secondaryDB, dev)
+		}
+	}
 }
 
 func handleLoggedOut(ctx context.Context, instance *DeviceInstance, chatStorageRepo domainChatStorage.IChatStorageRepository) {
 	logrus.Warnf("[REMOTE_LOGOUT] Received LoggedOut event for device %s - user logged out from phone", instance.ID())
 
+	instance.StopPeriodicSync()
 	if client := instance.GetClient(); client != nil {
 		client.Disconnect()
 	}
@@ -175,12 +150,13 @@ func handleLoggedOut(ctx context.Context, instance *DeviceInstance, chatStorageR
 	}
 }
 
-func handleConnectionEvents(_ context.Context, client *whatsmeow.Client, instance *DeviceInstance) {
+func handleConnectionEvents(ctx context.Context, client *whatsmeow.Client, instance *DeviceInstance) {
 	if client == nil {
 		return
 	}
 	if instance != nil {
 		instance.UpdateStateFromClient()
+		instance.StartPeriodicSync()
 
 		// Persist updated JID/DisplayName to database after successful connection
 		// Skip if instance.ID looks like a JID (auto-created device) to avoid recreating deleted duplicates
@@ -203,9 +179,13 @@ func handleConnectionEvents(_ context.Context, client *whatsmeow.Client, instanc
 		return
 	}
 
-	// Send configured presence when connecting and when the pushname is changed.
+	// Send presence available when connecting and when the pushname is changed.
 	// This makes sure that outgoing messages always have the right pushname.
-	sendConfiguredPresence(context.Background(), client)
+	if err := client.SendPresence(context.Background(), types.PresenceAvailable); err != nil {
+		log.Warnf("Failed to send available presence: %v", err)
+	} else {
+		log.Infof("Marked self as available")
+	}
 }
 
 func handleStreamReplaced(_ context.Context) {
@@ -284,5 +264,164 @@ func handleGroupInfo(ctx context.Context, evt *events.GroupInfo, deviceID string
 				logrus.Errorf("Failed to forward group info event to webhook: %v", err)
 			}
 		}(evt, client)
+	}
+}
+
+// handleCallOfferEvent handles incoming call offer events
+func handleCallOfferEvent(ctx context.Context, evt *events.CallOffer, deviceID string, client *whatsmeow.Client) {
+	log.Infof("Received call offer event for device %s: %+v", deviceID, evt)
+
+	// Create top-level payload for webhook
+	outerBody := make(map[string]any)
+	payload := make(map[string]any)
+
+	outerBody["event"] = "call_offer" // Event name for webhook
+	outerBody["device_id"] = deviceID
+
+	// Timestamp consistent with other payloads (RFC3339)
+	outerBody["Timestamp"] = evt.Timestamp.Format(time.RFC3339)
+	payload["Timestamp"] = evt.Timestamp.Format(time.RFC3339) // Also in inner payload for consistency
+
+	payload["Call_ID"] = string(evt.CallID)
+	payload["Call_LID"] = evt.From.String()
+	payload["Port"] = config.AppPort // Add Port from config
+
+	// Determine if it's a group call
+	payload["Is_Group_Call"] = !evt.GroupJID.IsEmpty()
+
+	// Determine From_Me
+	if client.Store.ID != nil && evt.CallCreator == *client.Store.ID {
+		payload["From_Me"] = true
+	} else {
+		payload["From_Me"] = false
+	}
+
+
+	var contactJID types.JID
+	if !evt.CallCreatorAlt.IsEmpty() {
+		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreator, client) // Use NormalizeJIDFromLID
+	} else {
+		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreator, client) // Use NormalizeJIDFromLID
+	}
+
+	payload["Sender_Number_Call"] = contactJID.User // Changed from .User to full JID if possible? Let's keep .User for now if it's the contact's number part.
+	
+	// Try to get PushName
+	contact, err := client.Store.Contacts.GetContact(ctx, contactJID)
+	if err == nil && contact.Found && contact.PushName != "" {
+		payload["Sender_Pushname_Call"] = contact.PushName
+	} else {
+		payload["Sender_Pushname_Call"] = "Unknown"
+	}
+
+	// Receiver pushname
+	if client.Store != nil && client.Store.PushName != "" {
+		payload["Receiver_Pushname_Call"] = client.Store.PushName
+	} else {
+		payload["Receiver_Pushname_Call"] = "Unknown"
+	}
+
+	// Determine call type (video/audio)
+	isVideo := false
+	if evt.Data != nil {
+		for _, child := range evt.Data.GetChildren() {
+			if child.Tag == "video" {
+				isVideo = true
+				break
+			}
+		}
+	}
+	if isVideo {
+		payload["Type_Call"] = "video"
+		payload["Type"] = "video_call_offer_message" // Consistent Type field
+	} else {
+		payload["Type_Call"] = "audio"
+		payload["Type"] = "audio_call_offer_message" // Consistent Type field
+	}
+
+	outerBody["payload"] = payload
+
+	if len(config.WhatsappWebhook) > 0 {
+		go func(body map[string]any) {
+			webhookCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := forwardPayloadToConfiguredWebhooks(webhookCtx, body, "call offer event"); err != nil {
+				log.Errorf("Failed to forward call offer event to webhook: %v", err)
+			}
+		}(outerBody)
+	}
+}
+
+// handleCallTerminateEvent handles call termination events
+func handleCallTerminateEvent(ctx context.Context, evt *events.CallTerminate, deviceID string, client *whatsmeow.Client) {
+	log.Infof("Received call terminate event for device %s: %+v", deviceID, evt)
+
+	outerBody := make(map[string]any)
+	payload := make(map[string]any)
+
+	outerBody["event"] = "call_terminate" // Event name for webhook
+	outerBody["device_id"] = deviceID
+
+	// Timestamp consistent with other payloads (RFC3339)
+	outerBody["Timestamp"] = evt.Timestamp.Format(time.RFC3339)
+	payload["Timestamp"] = evt.Timestamp.Format(time.RFC3339) // Also in inner payload for consistency
+
+	payload["Call_ID"] = evt.CallID
+	payload["Call_LID"] = evt.From.String()
+	payload["Port"] = config.AppPort // Add Port from config
+
+	// Determine From_Me
+	if client.Store.ID != nil && evt.From == *client.Store.ID {
+		payload["From_Me"] = true
+	} else {
+		payload["From_Me"] = false
+	}
+
+
+	// Determine shutdown causer
+	shutdownCauser := evt.Reason
+	if evt.Reason == "rejected_elsewhere" {
+		shutdownCauser = "my_Self"
+	} else if evt.Reason == "" {
+		shutdownCauser = "sender_hung_up"
+	}
+	payload["Shutdown_Causer"] = shutdownCauser
+
+	var contactJID types.JID
+	if !evt.CallCreatorAlt.IsEmpty() {
+		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreatorAlt, client) // Use NormalizeJIDFromLID
+	} else {
+		contactJID = NormalizeJIDFromLID(ctx, evt.CallCreator, client) // Use NormalizeJIDFromLID
+	}
+
+	payload["Sender_Number_Call"] = contactJID.User
+	
+	// Try to get PushName
+	contact, err := client.Store.Contacts.GetContact(ctx, contactJID)
+	if err == nil && contact.Found && contact.PushName != "" {
+		payload["Sender_Pushname_Call"] = contact.PushName
+	} else {
+		payload["Sender_Pushname_Call"] = "Unknown"
+	}
+
+	// Receiver pushname
+	if client.Store != nil && client.Store.PushName != "" {
+		payload["Receiver_Pushname_Call"] = client.Store.PushName
+	} else {
+		payload["Receiver_Pushname_Call"] = "Unknown"
+	}
+
+	payload["Type"] = "call_terminate_message" // Consistent Type field
+
+	outerBody["payload"] = payload
+
+	if len(config.WhatsappWebhook) > 0 {
+		go func(body map[string]any) {
+			webhookCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := forwardPayloadToConfiguredWebhooks(webhookCtx, body, "call terminate event"); err != nil {
+				log.Errorf("Failed to forward call terminate event to webhook: %v", err)
+			}
+		}(outerBody)
 	}
 }

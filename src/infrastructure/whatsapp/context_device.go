@@ -40,3 +40,14 @@ func ClientFromContext(ctx context.Context) *whatsmeow.Client {
 	// No device in context - fall back to global client for backward compatibility
 	return GetClient()
 }
+
+// DeviceIDFromContext extracts the JID or ID from the device in context.
+func DeviceIDFromContext(ctx context.Context) string {
+	if inst, ok := DeviceFromContext(ctx); ok && inst != nil {
+		if jid := inst.JID(); jid != "" {
+			return jid
+		}
+		return inst.ID()
+	}
+	return ""
+}

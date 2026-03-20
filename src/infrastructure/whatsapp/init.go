@@ -32,30 +32,27 @@ var (
 	startupTime   = time.Now().Unix()
 )
 
-func syncKeysDevice(ctx context.Context, db, keysDB *sqlstore.Container) {
-	if keysDB == nil {
+func syncKeysDevice(ctx context.Context, keysDB *sqlstore.Container, dev *store.Device) {
+	if keysDB == nil || dev == nil || dev.ID == nil {
 		return
 	}
 
-	dev, err := db.GetFirstDevice(ctx)
-	if err != nil {
-		log.Errorf("Failed to get all devices: %v", err)
+	found := false
+	if devs, err := keysDB.GetAllDevices(ctx); err != nil {
+		log.Errorf("Failed to get all devices from keys DB: %v", err)
 	} else {
-		found := false
-		if devs, err := keysDB.GetAllDevices(ctx); err != nil {
-			log.Errorf("Failed to get all devices: %v", err)
-		} else {
-			for _, d := range devs {
-				if d.ID == dev.ID {
-					found = true
-					break
-				} else {
-					keysDB.DeleteDevice(ctx, d)
-				}
+		for _, d := range devs {
+			if d.ID != nil && d.ID.String() == dev.ID.String() {
+				found = true
+				break
 			}
+		}
 
-			if !found {
-				keysDB.PutDevice(ctx, dev)
+		if !found {
+			log.Infof("Provisioning device %s into keys database", dev.ID.String())
+			err = keysDB.PutDevice(ctx, dev)
+			if err != nil {
+				log.Errorf("Failed to put device into keys DB: %v", err)
 			}
 		}
 	}
@@ -87,7 +84,7 @@ func InitWaCLI(ctx context.Context, storeContainer, keysStoreContainer *sqlstore
 	if keysContainer != nil && device.ID != nil {
 		innerStore := sqlstore.NewSQLStore(keysStoreContainer, *device.ID)
 
-		syncKeysDevice(ctx, primaryDB, keysContainer)
+		syncKeysDevice(ctx, keysContainer, device)
 		device.Identities = innerStore
 		device.Sessions = innerStore
 		device.PreKeys = innerStore

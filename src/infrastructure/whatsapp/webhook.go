@@ -28,10 +28,16 @@ func submitWebhook(ctx context.Context, payload map[string]any, url string) erro
 		Transport: transport,
 	}
 
-	postBody, err := json.Marshal(payload)
+	var postBodyBuffer bytes.Buffer
+	encoder := json.NewEncoder(&postBodyBuffer)
+	encoder.SetEscapeHTML(false) // Desabilitar o escape de HTML
+	var err error // Declarar 'err' aqui
+	err = encoder.Encode(payload)
 	if err != nil {
 		return pkgError.WebhookError(fmt.Sprintf("Failed to marshal body: %v", err))
 	}
+
+	postBodyBytes := postBodyBuffer.Bytes() // Obter os bytes do buffer
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
@@ -39,7 +45,7 @@ func submitWebhook(ctx context.Context, payload map[string]any, url string) erro
 	}
 
 	secretKey := []byte(config.WhatsappWebhookSecret)
-	signature, err := utils.GetMessageDigestOrSignature(postBody, secretKey)
+	signature, err := utils.GetMessageDigestOrSignature(postBodyBytes, secretKey)
 	if err != nil {
 		return pkgError.WebhookError(fmt.Sprintf("error when create signature %v", err))
 	}
@@ -53,7 +59,7 @@ func submitWebhook(ctx context.Context, payload map[string]any, url string) erro
 
 	for attempt = 0; attempt < maxAttempts; attempt++ {
 		// Create new request body for each attempt
-		req.Body = io.NopCloser(bytes.NewBuffer(postBody))
+		req.Body = io.NopCloser(bytes.NewBuffer(postBodyBytes))
 		resp, err := client.Do(req)
 		if err == nil {
 			defer resp.Body.Close()

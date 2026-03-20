@@ -37,7 +37,6 @@ func (service serviceChat) ListChats(ctx context.Context, request domainChat.Lis
 		Offset:     request.Offset,
 		SearchName: request.Search,
 		HasMedia:   request.HasMedia,
-		Archived:   request.Archived,
 	}
 
 	// Get chats from storage
@@ -63,7 +62,6 @@ func (service serviceChat) ListChats(ctx context.Context, request domainChat.Lis
 			Name:                chat.Name,
 			LastMessageTime:     chat.LastMessageTime.Format(time.RFC3339),
 			EphemeralExpiration: chat.EphemeralExpiration,
-			Archived:            chat.Archived,
 			CreatedAt:           chat.CreatedAt.Format(time.RFC3339),
 			UpdatedAt:           chat.UpdatedAt.Format(time.RFC3339),
 		}
@@ -359,14 +357,4 @@ func (service serviceChat) ArchiveChat(ctx context.Context, request domainChat.A
 	}).Info("Chat archive operation completed successfully")
 
 	return response, nil
-}
-
-func (service serviceChat) UpsertChat(ctx context.Context, chat domainChat.ChatInfo) error {
-	storageChat := &domainChatStorage.Chat{
-		DeviceID: deviceIDFromContext(ctx),
-		JID:      chat.JID,
-		Name:     chat.Name,
-	}
-
-	return service.chatStorageRepo.UpsertChat(storageChat)
 }

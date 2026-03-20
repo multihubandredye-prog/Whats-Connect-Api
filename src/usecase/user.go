@@ -66,18 +66,7 @@ func (service serviceUser) Info(ctx context.Context, request domainUser.InfoRequ
 			})
 		}
 
-		// get contact name from store
-		contact, err := client.Store.Contacts.GetContact(ctx, dataWaRecipient)
-		if err != nil {
-			logrus.Warnf("failed to get contact info: %v", err)
-		}
-		contactName := contact.PushName
-		if contactName == "" {
-			contactName = contact.FullName
-		}
-
 		data := domainUser.InfoResponseData{
-			Name:      contactName,
 			Status:    userInfo.Status,
 			PictureID: userInfo.PictureID,
 			Devices:   device,
@@ -217,32 +206,15 @@ func (service serviceUser) MyListContacts(ctx context.Context, request domainUse
 	}
 	utils.MustLogin(client)
 
-	// Helper function to get the best possible name for a JID
-	getBestName := func(jid types.JID) string {
-		contact, _ := client.Store.Contacts.GetContact(ctx, jid)
-		if contact.FullName != "" {
-			return contact.FullName
-		}
-		if contact.BusinessName != "" {
-			return contact.BusinessName
-		}
-		if contact.PushName != "" {
-			return contact.PushName
-		}
-		return jid.User
-	}
-
 	if request.Filter == "chatted" {
-		const pageSize = 100
+		const pageSize = 100 // Max limit for ListChats
 		offset := 0
 		contactMap := make(map[types.JID]domainUser.MyListContactsResponseData)
 
 		for {
 			chatListRequest := domainChat.ListChatsRequest{
-				Limit:       pageSize,
-				Offset:      offset,
-				Archived:    utils.BoolPointer(false),
-				HasMessages: utils.BoolPointer(true),
+				Limit:  pageSize,
+				Offset: offset,
 			}
 			chatResponse, err := service.chatService.ListChats(ctx, chatListRequest)
 			if err != nil {
@@ -253,86 +225,57 @@ func (service serviceUser) MyListContacts(ctx context.Context, request domainUse
 			for _, chat := range chatResponse.Data {
 				jid, err := types.ParseJID(chat.JID)
 				if err != nil {
+					logrus.WithError(err).WithField("chat_jid_str", chat.JID).Warn("Failed to parse chat JID string")
 					continue
 				}
 
-				if jid.Server != types.DefaultUserServer {
+				if jid.Server == types.GroupServer {
 					continue
 				}
 
+				contact, err := client.Store.Contacts.GetContact(ctx, jid)
+				if err != nil {
+					logrus.WithError(err).WithField("contact_jid", jid).Warn("Failed to get contact info for chat JID")
+					continue
+				}
+
+				contactName := contact.PushName
+				if contactName == "" {
+					contactName = jid.User
+				}
 				contactMap[jid] = domainUser.MyListContactsResponseData{
 					JID:  jid,
-					Name: getBestName(jid),
+					Name: contactName,
 				}
 			}
 
 			if len(chatResponse.Data) < pageSize {
+				// No more chats to fetch
 				break
 			}
 			offset += pageSize
 		}
 
+		// Convert map to slice
 		for _, contactData := range contactMap {
 			response.Data = append(response.Data, contactData)
 		}
 	} else {
-		// filter=all: Get everyone from store and local chats
-		contactMap := make(map[types.JID]string)
+		// Default to "all" contacts, with name fallback
+		contacts, err := client.Store.Contacts.GetAllContacts(ctx)
+		if err != nil {
+			return response, err
+		}
 
-		// 1. Get from contacts store
-		contacts, _ := client.Store.Contacts.GetAllContacts(ctx)
 		for jid, contact := range contacts {
-			if jid.Server == types.DefaultUserServer {
-				name := contact.FullName
-				if name == "" {
-					name = contact.BusinessName
-				}
-				if name == "" {
-					name = contact.PushName
-				}
-				contactMap[jid] = name
-			}
-		}
-
-		// 2. Get from local chats table to find anyone missing
-		chats, _ := service.chatService.ListChats(ctx, domainChat.ListChatsRequest{Limit: 2000})
-		for _, chat := range chats.Data {
-			jid, err := types.ParseJID(chat.JID)
-			if err == nil && jid.Server == types.DefaultUserServer {
-				if _, exists := contactMap[jid]; !exists || contactMap[jid] == "" {
-					contactMap[jid] = chat.Name
-				}
-			}
-		}
-
-		// 3. Convert to response and try to fix missing names
-		var jidsToFetch []types.JID
-		for jid, name := range contactMap {
-			if name == "" || name == jid.User {
-				jidsToFetch = append(jidsToFetch, jid)
+			contactName := contact.PushName
+			if contactName == "" {
+				contactName = jid.User
 			}
 			response.Data = append(response.Data, domainUser.MyListContactsResponseData{
 				JID:  jid,
-				Name: name,
+				Name: contactName,
 			})
-		}
-
-		// Optionally try to fetch missing names in small batches (limit to first 50 to avoid timeout)
-		if len(jidsToFetch) > 0 {
-			maxFetch := 50
-			if len(jidsToFetch) < maxFetch {
-				maxFetch = len(jidsToFetch)
-			}
-			userInfo, _ := client.GetUserInfo(ctx, jidsToFetch[:maxFetch])
-			for jid, info := range userInfo {
-				for i, item := range response.Data {
-					if item.JID == jid && (item.Name == "" || item.Name == jid.User) {
-						if info.VerifiedName != nil && info.VerifiedName.Details != nil {
-							response.Data[i].Name = info.VerifiedName.Details.GetVerifiedName()
-						}
-					}
-				}
-			}
 		}
 	}
 

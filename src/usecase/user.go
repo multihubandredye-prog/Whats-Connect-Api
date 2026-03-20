@@ -233,16 +233,9 @@ func (service serviceUser) MyListContacts(ctx context.Context, request domainUse
 					continue
 				}
 
-				contact, err := client.Store.Contacts.GetContact(ctx, jid)
-				if err != nil {
-					logrus.WithError(err).WithField("contact_jid", jid).Warn("Failed to get contact info for chat JID")
-					continue
-				}
+				// Use the chat.Name directly, as it's already resolved by performSync in the database
+				contactName := chat.Name
 
-				contactName := contact.PushName
-				if contactName == "" {
-					contactName = jid.User
-				}
 				contactMap[jid] = domainUser.MyListContactsResponseData{
 					JID:  jid,
 					Name: contactName,

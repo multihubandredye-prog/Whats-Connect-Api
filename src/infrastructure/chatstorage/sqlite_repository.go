@@ -202,7 +202,7 @@ func (r *SQLiteRepository) GetChats(filter *domainChatStorage.ChatFilter) ([]*do
 	var args []any
 
 	query := `
-		SELECT c.device_id, c.jid, c.name, c.last_message_time, c.ephemeral_expiration, c.archived, c.created_at, c.updated_at
+		SELECT DISTINCT c.device_id, c.jid, c.name, c.last_message_time, c.ephemeral_expiration, c.archived, c.created_at, c.updated_at
 		FROM chats c
 	`
 
@@ -227,7 +227,8 @@ func (r *SQLiteRepository) GetChats(filter *domainChatStorage.ChatFilter) ([]*do
 	}
 
 	if filter.HasMessages != nil && *filter.HasMessages {
-		conditions = append(conditions, "c.last_message_time > '0001-01-01 00:00:00'") // Filtering out zero/default timestamps
+		conditions = append(conditions, "c.jid LIKE '%@s.whatsapp.net'") // Only private chats
+		conditions = append(conditions, "EXISTS (SELECT 1 FROM messages m2 WHERE m2.chat_jid = c.jid AND m2.device_id = c.device_id)")
 	}
 
 	if len(conditions) > 0 {
@@ -756,11 +757,13 @@ func (r *SQLiteRepository) DeleteDeviceRecord(deviceID string) error {
 func (r *SQLiteRepository) GetChatNameWithPushName(jid types.JID, chatJID string, senderUser string, pushName string) string {
 	// First, check if chat already exists with a name
 	existingChat, err := r.GetChat(chatJID)
+
+	// Priority 1: pushName provided in the event (the sender's chosen name)
+	if pushName != "" && pushName != senderUser && pushName != jid.User {
+		return pushName
+	}
+
 	if err == nil && existingChat != nil && existingChat.Name != "" {
-		// If we have a pushname and the existing name is just a phone number/JID user, update it
-		if pushName != "" && (existingChat.Name == jid.User || existingChat.Name == senderUser) {
-			return pushName
-		}
 		return existingChat.Name
 	}
 
@@ -777,10 +780,8 @@ func (r *SQLiteRepository) GetChatNameWithPushName(jid types.JID, chatJID string
 		name = fmt.Sprintf("Newsletter %s", jid.User)
 	default:
 		// This is an individual contact
-		// Priority: pushName > senderUser > JID user
-		if pushName != "" && pushName != senderUser && pushName != jid.User {
-			name = pushName
-		} else if senderUser != "" {
+		// Priority: senderUser > JID user
+		if senderUser != "" {
 			name = senderUser
 		} else {
 			name = jid.User
@@ -799,11 +800,13 @@ func (r *SQLiteRepository) GetChatNameWithPushNameByDevice(deviceID string, jid 
 
 	// First, check if chat already exists with a name (device-scoped!)
 	existingChat, err := r.GetChatByDevice(deviceID, chatJID)
+
+	// Priority 1: pushName provided in the event (the sender's chosen name)
+	if pushName != "" && pushName != senderUser && pushName != jid.User {
+		return pushName
+	}
+
 	if err == nil && existingChat != nil && existingChat.Name != "" {
-		// If we have a pushname and the existing name is just a phone number/JID user, update it
-		if pushName != "" && (existingChat.Name == jid.User || existingChat.Name == senderUser) {
-			return pushName
-		}
 		return existingChat.Name
 	}
 
@@ -820,10 +823,8 @@ func (r *SQLiteRepository) GetChatNameWithPushNameByDevice(deviceID string, jid 
 		name = fmt.Sprintf("Newsletter %s", jid.User)
 	default:
 		// This is an individual contact
-		// Priority: pushName > senderUser > JID user
-		if pushName != "" && pushName != senderUser && pushName != jid.User {
-			name = pushName
-		} else if senderUser != "" {
+		// Priority: senderUser > JID user
+		if senderUser != "" {
 			name = senderUser
 		} else {
 			name = jid.User

@@ -218,16 +218,23 @@ func (service serviceUser) MyListContacts(ctx context.Context, request domainUse
 	utils.MustLogin(client)
 
 	// Helper function to get the best possible name for a JID
-	getBestName := func(jid types.JID) string {
+	getBestName := func(jid types.JID, chatName string) string {
 		contact, _ := client.Store.Contacts.GetContact(ctx, jid)
+		// 1. Prioritize PushName (name set by the user themselves)
+		if contact.PushName != "" {
+			return contact.PushName
+		}
+		// 2. Fallback to FullName (name in our contacts agenda)
 		if contact.FullName != "" {
 			return contact.FullName
 		}
+		// 3. Fallback to BusinessName
 		if contact.BusinessName != "" {
 			return contact.BusinessName
 		}
-		if contact.PushName != "" {
-			return contact.PushName
+		// 4. Fallback to chat name from local storage
+		if chatName != "" && chatName != jid.User && chatName != jid.String() {
+			return chatName
 		}
 		return jid.User
 	}
@@ -235,7 +242,8 @@ func (service serviceUser) MyListContacts(ctx context.Context, request domainUse
 	if request.Filter == "chatted" {
 		const pageSize = 100
 		offset := 0
-		contactMap := make(map[types.JID]domainUser.MyListContactsResponseData)
+		var contactList []domainUser.MyListContactsResponseData
+		exists := make(map[types.JID]bool)
 
 		for {
 			chatListRequest := domainChat.ListChatsRequest{
@@ -260,9 +268,13 @@ func (service serviceUser) MyListContacts(ctx context.Context, request domainUse
 					continue
 				}
 
-				contactMap[jid] = domainUser.MyListContactsResponseData{
-					JID:  jid,
-					Name: getBestName(jid),
+				if !exists[jid] {
+					name := getBestName(jid, chat.Name)
+					contactList = append(contactList, domainUser.MyListContactsResponseData{
+						JID:  jid,
+						Name: name,
+					})
+					exists[jid] = true
 				}
 			}
 
@@ -272,9 +284,36 @@ func (service serviceUser) MyListContacts(ctx context.Context, request domainUse
 			offset += pageSize
 		}
 
-		for _, contactData := range contactMap {
-			response.Data = append(response.Data, contactData)
+		// Try to fix missing names for chatted contacts (especially business accounts)
+		var jidsToFetch []types.JID
+		for _, item := range contactList {
+			if item.Name == "" || item.Name == item.JID.User {
+				jidsToFetch = append(jidsToFetch, item.JID)
+			}
 		}
+
+		if len(jidsToFetch) > 0 {
+			// Limit to first 50 to avoid performance issues, same as "all" filter
+			maxFetch := 50
+			if len(jidsToFetch) < maxFetch {
+				maxFetch = len(jidsToFetch)
+			}
+			userInfo, _ := client.GetUserInfo(ctx, jidsToFetch[:maxFetch])
+			for jid, info := range userInfo {
+				for i, item := range contactList {
+					if item.JID == jid && (item.Name == "" || item.Name == jid.User) {
+						if info.VerifiedName != nil && info.VerifiedName.Details != nil {
+							contactList[i].Name = info.VerifiedName.Details.GetVerifiedName()
+						} else if info.Status != "" && (contactList[i].Name == "" || contactList[i].Name == jid.User) {
+							// If we still don't have a name, sometimes GetUserInfo updates the store
+							contactList[i].Name = getBestName(jid, "")
+						}
+					}
+				}
+			}
+		}
+
+		response.Data = contactList
 	} else {
 		// filter=all: Get everyone from store and local chats
 		contactMap := make(map[types.JID]string)

@@ -32,12 +32,13 @@ func (service serviceChat) ListChats(ctx context.Context, request domainChat.Lis
 
 	// Create filter from request
 	filter := &domainChatStorage.ChatFilter{
-		DeviceID:   deviceIDFromContext(ctx),
-		Limit:      request.Limit,
-		Offset:     request.Offset,
-		SearchName: request.Search,
-		HasMedia:   request.HasMedia,
-		Archived:   request.Archived,
+		DeviceID:    deviceIDFromContext(ctx),
+		Limit:       request.Limit,
+		Offset:      request.Offset,
+		SearchName:  request.Search,
+		HasMedia:    request.HasMedia,
+		Archived:    request.Archived,
+		HasMessages: request.HasMessages,
 	}
 
 	// Get chats from storage

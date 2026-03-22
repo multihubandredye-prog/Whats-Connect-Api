@@ -34,6 +34,9 @@ func RemoveFile(delaySecond int, paths ...string) error {
 		if path != "" {
 			err := os.Remove(path)
 			if err != nil {
+				if !os.IsNotExist(err) {
+					logrus.Warnf("Failed to auto-delete file %s: %v", path, err)
+				}
 				return err
 			}
 		}
